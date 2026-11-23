@@ -1,0 +1,2566 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>베이커리 원가계산 · 레시피·단가·발주서</title>
+<meta name="theme-color" content="#FAF5EC">
+<meta name="description" content="제과·제빵 레시피를 베이커스 퍼센트로 관리하고, 발주서 사진에서 단가를 읽어 원가·판매가까지 계산하는 무료 웹앱">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>:root {
+  --bg: #FAF5EC;
+  --panel: #FFFFFF;
+  --panel-2: #FFFCF6;
+  --ink: #2E2419;
+  --muted: #85705B;
+  --line: #E9DCC9;
+  --line-strong: #D9C6AC;
+  --accent: #B4611C;
+  --accent-dark: #8C4A12;
+  --accent-soft: #F7E7D2;
+  --ok: #2E7D5B;
+  --warn: #B5472B;
+  --info: #35658F;
+  --radius: 14px;
+  --shadow: 0 2px 10px rgba(70, 50, 30, .06);
+  --font: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 상단 바 ───────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: linear-gradient(180deg, #FFF9F0 0%, #FDF4E7 100%);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-in {
+  max-width: 1180px; margin: 0 auto; padding: 12px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand .logo { font-size: 26px; line-height: 1; }
+.brand strong { display: block; font-size: 17px; letter-spacing: -.3px; }
+.brand .sub { display: block; font-size: 11.5px; color: var(--muted); letter-spacing: .2px; }
+.topright { display: flex; align-items: center; gap: 8px; }
+.stage {
+  font-size: 11.5px; font-weight: 700; color: var(--accent-dark);
+  background: var(--accent-soft); border: 1px solid #EBD3B4;
+  padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+}
+.status { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.status.err { color: var(--warn); font-weight: 700; }
+
+/* ── 레이아웃 ─────────────────────────────── */
+.layout {
+  max-width: 1180px; margin: 0 auto; padding: 18px;
+  display: grid; grid-template-columns: 274px 1fr; gap: 18px;
+  align-items: start;
+}
+.sidebar { position: sticky; top: 78px; }
+.content { min-width: 0; }
+
+/* ── 사이드바 ─────────────────────────────── */
+.btn-new {
+  width: 100%; padding: 10px 12px; margin-bottom: 10px;
+  border: 1px dashed var(--line-strong); border-radius: 11px;
+  background: #FFFDF9; color: var(--accent-dark);
+  font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer;
+}
+.btn-new:hover { background: var(--accent-soft); border-color: var(--accent); }
+.list { display: flex; flex-direction: column; gap: 7px; }
+.list-item {
+  text-align: left; width: 100%; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 11px; padding: 9px 11px; font: inherit; color: var(--ink);
+  display: flex; flex-direction: column; gap: 2px;
+  transition: border-color .12s, background .12s, transform .12s;
+}
+.list-item:hover { border-color: var(--line-strong); }
+.list-item.active { border-color: var(--accent); background: #FFF6EA; box-shadow: inset 3px 0 0 var(--accent); }
+.li-title { font-weight: 700; font-size: 14px; letter-spacing: -.2px; }
+.li-meta { font-size: 11.5px; color: var(--muted); }
+.side-note {
+  margin-top: 12px; font-size: 11.5px; color: var(--muted);
+  line-height: 1.6; padding: 10px 11px;
+  background: #FFFDF8; border: 1px solid var(--line); border-radius: 11px;
+}
+
+/* ── 카드 ─────────────────────────────────── */
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px 16px 14px;
+  box-shadow: var(--shadow); margin-bottom: 14px;
+}
+.card h2 {
+  font-size: 14px; margin: 0; letter-spacing: -.2px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.card h2 .tag {
+  font-size: 10.5px; font-weight: 700; color: var(--muted);
+  background: #F5EDE1; border-radius: 999px; padding: 2px 7px; letter-spacing: 0;
+}
+.row { display: flex; align-items: center; gap: 10px; }
+.row.between { justify-content: space-between; }
+.hint { font-size: 11.5px; color: var(--muted); }
+.meta { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+
+/* ── 입력 요소 ─────────────────────────────── */
+input, select, textarea { font-family: inherit; font-size: 14px; color: var(--ink); }
+.title-input {
+  flex: 1; border: 1px solid transparent; background: transparent;
+  font-size: 21px; font-weight: 700; letter-spacing: -.5px;
+  padding: 4px 6px; border-radius: 9px; min-width: 0;
+}
+.title-input:hover { background: var(--panel-2); }
+.title-input:focus { background: #fff; border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(180, 97, 28, .12); }
+
+.grid3 { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; margin-top: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field > span { font-size: 11.5px; font-weight: 700; color: var(--muted); letter-spacing: .2px; }
+.field small { font-size: 10.5px; color: #A08A74; line-height: 1.35; }
+.field input, .field select, .cell {
+  border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px;
+  background: var(--panel-2); width: 100%;
+}
+.field input:focus, .field select:focus, .cell:focus, .i-name:focus, .i-grams:focus, .i-price:focus {
+  outline: none; border-color: var(--accent); background: #fff;
+  box-shadow: 0 0 0 3px rgba(180, 97, 28, .12);
+}
+
+/* ── 배율 탭 ─────────────────────────────── */
+.tabs { display: inline-flex; gap: 3px; background: #F3E8D8; border-radius: 11px; padding: 4px; margin: 10px 0 12px; }
+.tabs button {
+  border: none; background: transparent; font: inherit; font-size: 13px; font-weight: 700;
+  color: #8B745C; padding: 7px 13px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+}
+.tabs button.on { background: #fff; color: var(--accent-dark); box-shadow: 0 1px 4px rgba(110, 80, 40, .14); }
+
+.mode-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--ink);
+  font: inherit; font-size: 13px; font-weight: 700; padding: 7px 12px;
+  border-radius: 999px; cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); }
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.radios { display: flex; gap: 12px; font-size: 12.5px; color: #6B5745; padding-bottom: 9px; }
+.radios label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
+/* ── 결과 스트립 ─────────────────────────── */
+.strip {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: #EBD9C2; border: 1px solid #E4D0B6; border-radius: 12px;
+  overflow: hidden; margin-top: 14px;
+}
+.strip-item { background: #FFF8EC; padding: 10px 12px 11px; display: flex; flex-direction: column; gap: 1px; }
+.strip-item .k { font-size: 10.5px; font-weight: 700; color: #97795C; letter-spacing: .3px; }
+.strip-item .v { font-size: 18px; font-weight: 700; letter-spacing: -.5px; color: var(--accent-dark); }
+.strip-item .v small { font-size: 11.5px; font-weight: 600; color: #97795C; margin-left: 2px; }
+.strip-item .s { font-size: 10.5px; color: #A08A74; }
+
+/* ── 재료 표 ─────────────────────────────── */
+.tableWrap { overflow-x: auto; margin: 10px -4px 0; padding: 0 4px; }
+table { width: 100%; border-collapse: collapse; min-width: 520px; }
+thead th {
+  text-align: left; font-size: 10.5px; letter-spacing: .4px; color: #9A8268;
+  font-weight: 700; padding: 6px 6px; border-bottom: 2px solid var(--line-strong); white-space: nowrap;
+}
+thead th.num, tbody td.num, tfoot td.num { text-align: right; }
+tbody td { padding: 4px 6px; border-bottom: 1px solid #F3EADD; vertical-align: middle; }
+tbody tr:hover { background: #FFFCF6; }
+tbody tr.row-flour { background: #FFFAF1; }
+.i-name, .i-grams, .i-price, .i-group {
+  border: 1px solid transparent; background: transparent; border-radius: 7px;
+  padding: 6px 7px; width: 100%; font-size: 13.5px;
+}
+.i-name:hover, .i-grams:hover, .i-price:hover, .i-group:hover { background: #FFFDF8; border-color: var(--line); }
+.i-grams, .i-price { text-align: right; font-variant-numeric: tabular-nums; }
+.i-group { font-size: 12.5px; color: #6B5745; }
+.v-pct { font-size: 12.5px; color: #8B7358; font-variant-numeric: tabular-nums; }
+.v-scaled {
+  font-size: 15px; font-weight: 700; color: var(--accent-dark);
+  font-variant-numeric: tabular-nums; letter-spacing: -.3px;
+}
+.unit { font-size: 10.5px; color: #A08A74; }
+.p2badge { font-size: 10px; color: #B0A192; }
+.i-del {
+  border: none; background: transparent; color: #C9B49C; font-size: 17px;
+  line-height: 1; cursor: pointer; padding: 3px 6px; border-radius: 6px;
+}
+.i-del:hover { background: #FBEAE4; color: var(--warn); }
+tfoot td { padding: 9px 6px 3px; font-size: 12.5px; color: #6B5745; border-top: 2px solid var(--line-strong); }
+tfoot .v-scaled { font-size: 15px; }
+.btn-add {
+  margin-top: 10px; width: 100%; padding: 9px; border: 1px dashed var(--line-strong);
+  background: #FFFDF9; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 700;
+  color: var(--accent-dark); cursor: pointer;
+}
+.btn-add:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+/* ── 공정 / 메모 ─────────────────────────── */
+textarea.steps {
+  width: 100%; min-height: 128px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--panel-2); padding: 10px 12px; line-height: 1.75; resize: vertical;
+}
+textarea.steps:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(180, 97, 28, .12); }
+.memo {
+  margin-top: 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: repeating-linear-gradient(#FFFFFF 0px, #FFFFFF 26px, #EFE3D2 26px, #EFE3D2 27px);
+  overflow: hidden;
+}
+.memo-label { font-size: 10.5px; font-weight: 700; color: #A08A74; margin-top: 12px; letter-spacing: .3px; }
+
+/* ── 경고 ─────────────────────────────────── */
+.warnWrap { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.warn-item {
+  display: flex; gap: 8px; align-items: flex-start;
+  background: #fff; border: 1px solid var(--line); border-left: 3px solid var(--line-strong);
+  border-radius: 9px; padding: 8px 11px; font-size: 12.5px; line-height: 1.5;
+}
+.warn-item.error { border-left-color: var(--warn); background: #FDF6F3; }
+.warn-item.warn { border-left-color: #C98A2B; background: #FFFBF2; }
+.warn-item.info { border-left-color: var(--info); background: #F6FAFD; }
+.warn-item .ic { font-size: 12px; }
+
+/* ── 액션 ─────────────────────────────────── */
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.btn {
+  font: inherit; font-size: 13.5px; font-weight: 700; padding: 10px 16px;
+  border-radius: 10px; border: 1px solid var(--line-strong); background: #fff;
+  color: var(--ink); cursor: pointer;
+}
+.btn:hover { background: var(--panel-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-dark); }
+.btn.danger { color: var(--warn); border-color: #E6C4B8; }
+.btn.danger:hover { background: #FDF3EF; }
+
+/* ── 푸터 / 광고 슬롯 ─────────────────────── */
+.footer { max-width: 1180px; margin: 0 auto; padding: 4px 18px 28px; }
+.ad-slot {
+  border: 1px dashed var(--line-strong); border-radius: 10px;
+  background: #FFFDF8; color: #B3A190; font-size: 11px; letter-spacing: .4px;
+  text-align: center; padding: 14px; margin-bottom: 10px;
+}
+.foot-note { font-size: 11px; color: #A08A74; line-height: 1.7; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
+  .sidebar { position: static; }
+  .list { flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+  .list-item { min-width: 172px; }
+  .side-note { display: none; }
+  .topbar-in { padding: 10px 12px; }
+  .brand .sub { display: none; }
+  .stage { display: none; }
+  .card { padding: 13px 12px 12px; border-radius: 12px; }
+  .title-input { font-size: 18px; }
+  .grid3 { grid-template-columns: 1fr 1fr; }
+  .grid3 .field:first-child { grid-column: 1 / -1; }
+  .strip { grid-template-columns: 1fr 1fr; }
+  .footer { padding: 4px 12px 24px; }
+  table { min-width: 470px; }
+  .hide-sm { display: none; }
+}
+@media (max-width: 560px) {
+  .topbar-in { min-width: 0; gap: 8px; }
+  .brand { min-width: 0; }
+  .brand strong { font-size: 15px; white-space: nowrap; }
+  .topright { gap: 4px; min-width: 0; }
+  .status {
+    max-width: 112px; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; font-size: 10.5px;
+  }
+  .strip-item { padding: 9px 10px; }
+  .strip-item .s { font-size: 10px; }
+}
+@media (max-width: 430px) {
+  .strip-item .v { font-size: 16px; }
+  .tabs button { padding: 7px 10px; font-size: 12.5px; }
+}
+
+/* ── 탭 내비게이션 ─────────────────────── */
+.nav {
+  max-width: 1180px; margin: 0 auto; padding: 0 12px 8px;
+  display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
+}
+.nav::-webkit-scrollbar { display: none; }
+.navbtn {
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  border: 1px solid transparent; background: transparent; color: #8B745C;
+  font: inherit; font-size: 13px; font-weight: 700; padding: 8px 12px;
+  border-radius: 9px; cursor: pointer;
+}
+.navbtn:hover { background: #FBEFDE; }
+.navbtn.on { background: #fff; color: var(--accent-dark); border-color: var(--line-strong); box-shadow: 0 1px 4px rgba(110,80,40,.12); }
+.nic { font-size: 15px; }
+
+.view { max-width: 1180px; margin: 0 auto; padding: 14px 18px 8px; }
+
+/* ── 버튼 변형 ─────────────────────────── */
+.btn.sm { padding: 7px 11px; font-size: 12.5px; border-radius: 9px; }
+.chip.sm { padding: 6px 10px; font-size: 12px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── 원가 계산 ─────────────────────────── */
+.cost-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 14px; align-items: start; }
+.cost-lines { display: flex; flex-direction: column; gap: 1px; background: #EBD9C2; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+.cost-line { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 9px 12px; }
+.cost-line .cl-k { font-size: 12.5px; color: #6B5745; display: flex; align-items: baseline; gap: 6px; }
+.cost-line .cl-k small { font-size: 10.5px; color: #A08A74; }
+.cost-line .cl-v { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cost-line.sum { background: #FFF6EA; }
+.cost-line.sum .cl-k { font-weight: 700; color: var(--ink); }
+.cost-line.sum .cl-v { font-size: 17px; color: var(--accent-dark); }
+.compare { margin-top: 10px; border-top: 1px dashed var(--line-strong); padding-top: 9px; }
+.cmp-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: #6B5745; padding: 4px 0; }
+.cmp-row strong { font-variant-numeric: tabular-nums; color: var(--ink); }
+.cmp-row strong.muted { color: #A08A74; }
+.cmp-row strong.accent { color: var(--accent-dark); font-size: 14px; }
+.badge { font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 999px; letter-spacing: 0; }
+.badge.bad { background: #FBEAE4; color: var(--warn); }
+.badge.ok { background: #EAF4EE; color: var(--ok); }
+
+/* ── 단가표 · 월별 변화 ─────────────────── */
+.mm-summary { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 12.5px; color: #6B5745; margin: 8px 0 10px; }
+.mm-summary strong { font-size: 14px; }
+.up { color: var(--warn); }
+.down { color: var(--ok); }
+.chg { font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.chg.up, .chg.down { color: inherit; }
+table.mm td { vertical-align: middle; }
+table.mm .pv { font-variant-numeric: tabular-nums; }
+.mom { display: block; font-size: 9.5px; font-weight: 700; opacity: .85; }
+.mom.up { color: var(--warn); }
+.mom.down { color: var(--ok); }
+.nodata { color: #CBBBA6; }
+.legend { display: flex; gap: 14px; margin-top: 9px; font-size: 11.5px; }
+.legend .up, .legend .down { font-weight: 700; }
+.hist { display: flex; flex-direction: column; gap: 1px; background: #EBD9C2; border-radius: 10px; overflow: hidden; }
+.hist-row { display: grid; grid-template-columns: 88px 1.2fr 1fr 110px 1fr; gap: 8px; background: #fff; padding: 8px 11px; font-size: 12.5px; align-items: center; }
+.hist-row .hd { color: #8B7358; font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.hist-row .hn { font-weight: 700; }
+.hist-row .hu, .hist-row .hs { color: #8B7358; font-size: 11.5px; }
+.hist-row .hv { font-weight: 700; color: var(--accent-dark); font-variant-numeric: tabular-nums; }
+
+/* ── OCR 공통 ─────────────────────────── */
+.ocr-card { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(180,97,28,.08); }
+.ocr-grid { display: grid; grid-template-columns: 330px 1fr; gap: 14px; margin-top: 10px; align-items: start; }
+.ocr-left, .ocr-right { min-width: 0; }
+.ocr-hint { font-size: 11.5px; color: var(--muted); line-height: 1.6; margin-top: 8px; }
+.file-input { display: none; }
+.drop { border: 1px dashed var(--line-strong); border-radius: 11px; background: #FFFDF8; }
+.drop-label { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 16px 10px; cursor: pointer; text-align: center; }
+.drop-label:hover { background: #FFF6EA; }
+.dic { font-size: 24px; }
+.drop-label strong { font-size: 13px; color: var(--accent-dark); }
+.dh { font-size: 11px; color: #A08A74; }
+.ocr-progress { font-size: 11.5px; color: var(--accent-dark); font-weight: 700; min-height: 16px; margin-top: 6px; }
+.conf { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; white-space: nowrap; }
+.conf.c1 { background: #FBEAE4; color: var(--warn); }
+.conf.c2 { background: #FFF3DC; color: #A5711A; }
+.conf.c3 { background: #EAF4EE; color: var(--ok); }
+tr.lowconf { background: #FFFBF6; }
+.confirm { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: #6B5745; background: #FFFDF6; border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; cursor: pointer; }
+.confirm input { width: 16px; height: 16px; }
+.empty { padding: 18px 12px; text-align: center; color: #A08A74; font-size: 12.5px; line-height: 1.9; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; background: #F7EEE1; padding: 1px 5px; border-radius: 5px; }
+.rules { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.rule { font-size: 12px; color: #6B5745; line-height: 1.6; display: flex; gap: 6px; }
+.rule b { color: var(--ink); font-size: 11px; background: #F5EDE1; border-radius: 5px; padding: 0 5px; height: 18px; line-height: 18px; flex: 0 0 auto; }
+.card.report { border-color: var(--ok); }
+.signed { font-variant-numeric: tabular-nums; }
+
+/* ── A4 인쇄 시트 ─────────────────────── */
+#printRoot { display: none; }
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  html, body { background: #fff !important; }
+  .topbar, #app, .footer, .ad-slot { display: none !important; }
+  #printRoot { display: block !important; }
+  .sheet { width: 186mm; font-size: 10pt; color: #111; font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #111; padding-bottom: 5mm; }
+  .sheet-head h1 { margin: 0; font-size: 17pt; letter-spacing: -.5px; }
+  .sh-meta { font-size: 8.5pt; color: #555; margin-top: 2mm; }
+  .sh-sum { display: flex; gap: 6mm; font-size: 8.5pt; color: #555; }
+  .sh-sum b { display: block; font-size: 12pt; color: #111; }
+  .sh-body { display: flex; gap: 5mm; margin-top: 4mm; align-items: flex-start; }
+  .sh-left { flex: 1.35; min-width: 0; }
+  .sh-right { flex: 1; min-width: 0; }
+  .sh-t { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  .sh-t th { text-align: left; font-size: 7.5pt; color: #666; border-bottom: 1px solid #999; padding: 1.5mm 1.5mm; }
+  .sh-t td { padding: 1.2mm 1.5mm; border-bottom: 1px solid #E5E5E5; }
+  .sh-t .r { text-align: right; font-variant-numeric: tabular-nums; }
+  .sh-t tr.tot td { border-top: 1.5px solid #111; font-weight: 700; }
+  .sh-t tr.sell td { background: #F3F3F3; font-weight: 700; font-size: 10pt; }
+  .sh-steps { margin-top: 4mm; font-size: 9pt; }
+  .sh-steps b { display: block; font-size: 8pt; color: #666; margin-bottom: 1mm; }
+  .sh-stepbody { line-height: 1.7; }
+  .sh-memo { margin-top: 4mm; }
+  .sh-memo b { display: block; font-size: 8pt; color: #666; margin-bottom: 1mm; }
+  .memo-lines { border: 1px solid #BBB; border-radius: 1mm; padding: 1mm 2mm; min-height: 52mm; }
+  .memo-lines .ml { height: 7.4mm; border-bottom: 1px dotted #CCC; }
+  .sh-foot { margin-top: 3mm; font-size: 7.5pt; color: #888; border-top: 1px solid #DDD; padding-top: 1.5mm; }
+}
+
+@media (max-width: 900px) {
+  .view { padding: 12px 12px 8px; }
+  .cost-grid { grid-template-columns: 1fr; }
+  .ocr-grid { grid-template-columns: 1fr; }
+  .rules { grid-template-columns: 1fr; }
+  .hist-row { grid-template-columns: 74px 1fr 92px; }
+  .hist-row .hs { display: none; }
+  .nav { padding: 0 8px 8px; }
+  .navbtn { padding: 7px 10px; font-size: 12.5px; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <span class="logo">🥖</span>
+      <div>
+        <strong>베이커리 원가계산</strong>
+        <span class="sub">레시피 · 단가 · 발주서 · 원가</span>
+      </div>
+    </div>
+    <div class="topright">
+      <span class="stage">v2</span>
+      <span id="status" class="status">기기에 자동 저장</span>
+    </div>
+  </div>
+  <nav id="nav" class="nav"></nav>
+</header>
+
+<main id="app">
+  <div id="view" class="view"></div>
+</main>
+
+<footer class="footer">
+  <div class="ad-slot">광고 영역 (하단 고정 배너) · AdSense 승인 후 활성</div>
+  <div class="foot-note">
+    모든 계산은 브라우저 안에서 처리됩니다 · 데이터는 이 기기에 저장 · 계정 필요 없음<br>
+    사진 인식은 tesseract.js(무료)로 기기 안에서 실행되며 사진이 외부로 전송되지 않습니다.
+  </div>
+</footer>
+
+<div id="printRoot"></div>
+
+<script>/* BakeryCore — 베이커리 계산 앱 계산 엔진 (P1: 베이커스 퍼센트 · 배율 · 수율)
+   순수 함수만 담는다. 브라우저(window.BakeryCore)와 Node(module.exports) 양쪽에서 동작. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.BakeryCore = factory();
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  var SMALL_THRESHOLD = 10; // 10g 미만은 0.1g 단위 유지 (이스트·소금 등)
+
+  function num(v) { var n = Number(v); return Number.isFinite(n) ? n : 0; }
+  function nonNeg(v) { var n = num(v); return n > 0 ? n : 0; }
+  function sum(list) { return (list || []).reduce(function (a, b) { return a + b; }, 0); }
+  function round1(v) { return Math.round(v * 10) / 10; }
+
+  function isFlour(i) { return !!i && i.group === 'flour'; }
+  function isLiquid(i) { return !!i && (i.group === 'water' || i.group === 'liquid'); }
+
+  function flourTotal(ings) { return sum((ings || []).filter(isFlour).map(function (i) { return nonNeg(i.grams); })); }
+  function doughTotal(ings) { return sum((ings || []).map(function (i) { return nonNeg(i.grams); })); }
+
+  /* 재료의 베이커스 퍼센트 = 재료무게 / 밀가루총량 × 100 (밀가루 = 100%) */
+  function bakersPct(grams, flour) {
+    if (!(flour > 0)) return null;
+    return nonNeg(grams) / flour * 100;
+  }
+  /* 반죽 전체의 베이커스 퍼센트 합 (밀가루 100% + 나머지) */
+  function totalBakersPct(ings) {
+    var f = flourTotal(ings);
+    if (!(f > 0)) return null;
+    return doughTotal(ings) / f * 100;
+  }
+  /* 수분율(hydration) = 액체 총량 / 밀가루 총량 × 100 */
+  function hydrationPct(ings) {
+    var f = flourTotal(ings);
+    if (!(f > 0)) return null;
+    return sum((ings || []).filter(isLiquid).map(function (i) { return nonNeg(i.grams); })) / f * 100;
+  }
+
+  /* 반올림 규칙: 10g 이상 → 1g 단위, 10g 미만 → 0.1g 단위(최소 0.1g) */
+  function roundSmart(g) {
+    var v = num(g);
+    if (!(v > 0)) return 0;
+    if (v >= SMALL_THRESHOLD) return Math.round(v);
+    var r = round1(v);
+    return r < 0.1 ? 0.1 : r;
+  }
+
+  /* 손실률 정규화: 12(%) → 0.12, 0.12 → 0.12, 범위 0~0.9 */
+  function normalizeLoss(loss) {
+    var l = num(loss);
+    if (l > 1) l = l / 100;
+    if (!(l > 0)) return 0;
+    if (l > 0.9) return 0.9;
+    return l;
+  }
+
+  function factorFromMultiplier(m) {
+    var v = num(m);
+    return v > 0 ? v : 1;
+  }
+  function factorFromDoughWeight(targetDoughG, ings) {
+    var base = doughTotal(ings), t = num(targetDoughG);
+    if (!(base > 0) || !(t > 0)) return null;
+    return t / base;
+  }
+  function factorFromPieces(count, pieceG, ings, piecesMode, loss) {
+    var c = num(count), w = num(pieceG);
+    if (!(c > 0) || !(w > 0)) return null;
+    var target = c * w;
+    var l = normalizeLoss(loss);
+    var targetDough = (piecesMode === 'finished') ? target / (1 - l) : target;
+    return factorFromDoughWeight(targetDough, ings);
+  }
+
+  /* 보기 모드 → 배율 계산 */
+  function computeFactor(recipe, view) {
+    var ings = (recipe && recipe.ingredients) || [];
+    var mode = (view && view.mode) || 'multiplier';
+    var out = { mode: mode, factor: 1, note: null, targetDoughG: null };
+
+    if (mode === 'dough') {
+      out.targetDoughG = num(view && view.targetDough);
+      var f1 = factorFromDoughWeight(out.targetDoughG, ings);
+      if (f1 === null) { out.note = '목표 반죽 중량을 입력하면 배율이 자동 계산됩니다.'; }
+      else out.factor = f1;
+    } else if (mode === 'pieces') {
+      var count = num(view && view.pieceCount), w = num(view && view.pieceWeight);
+      out.targetDoughG = count * w;
+      var f2 = factorFromPieces(count, w, ings, view && view.piecesMode, recipe && recipe.lossRate);
+      if (f2 === null) { out.note = '개수와 개당 무게를 입력하면 배율이 자동 계산됩니다.'; }
+      else out.factor = f2;
+    } else {
+      out.factor = factorFromMultiplier(view && view.multiplier);
+    }
+    return out;
+  }
+
+  /* 배율 적용 재료 배열 */
+  function scaleIngredients(ings, factor) {
+    var f = num(factor) > 0 ? num(factor) : 1;
+    return (ings || []).map(function (i) {
+      var base = nonNeg(i.grams);
+      var raw = base * f;
+      return {
+        id: i.id, name: i.name, group: i.group,
+        baseGrams: base, rawGrams: raw, scaledGrams: roundSmart(raw)
+      };
+    });
+  }
+
+  /* 레시피 + 보기 설정 → 화면에 그릴 전체 결과 */
+  function buildResult(recipe, view) {
+    var r = recipe || {};
+    var ings = r.ingredients || [];
+    var loss = normalizeLoss(r.lossRate);
+    var warnings = [];
+
+    var fInfo = computeFactor(r, view);
+    var factor = fInfo.factor;
+
+    var baseFlour = flourTotal(ings);
+    var baseDough = doughTotal(ings);
+    var rows = scaleIngredients(ings, factor);
+    var scaledDough = sum(rows.map(function (x) { return x.scaledGrams; }));
+    var scaledFlour = sum(rows.filter(function (x) { return x.group === 'flour'; }).map(function (x) { return x.scaledGrams; }));
+
+    var table = rows.map(function (x) {
+      return {
+        id: x.id, name: x.name, group: x.group,
+        baseGrams: x.baseGrams, rawGrams: x.rawGrams, scaledGrams: x.scaledGrams,
+        bakersPct: bakersPct(x.baseGrams, baseFlour),
+        scaledBakersPct: scaledFlour > 0 ? x.scaledGrams / scaledFlour * 100 : null
+      };
+    });
+
+    var expectedFinished = scaledDough * (1 - loss);
+    var count = num(view && view.pieceCount);
+    var expectedPerPiece = count > 0 ? expectedFinished / count : null;
+    var doughPerPiece = count > 0 ? scaledDough / count : null;
+
+    if (!ings.length) {
+      warnings.push({ level: 'error', text: '재료가 없습니다. 재료를 추가해 주세요.' });
+    }
+    if (ings.length && baseFlour <= 0) {
+      warnings.push({ level: 'error', text: '분류가 "밀가루"인 재료가 없어 베이커스 퍼센트를 계산할 수 없습니다. (밀가루 = 100% 기준)' });
+    }
+    if (ings.length && baseFlour > 0 && loss === 0) {
+      warnings.push({ level: 'info', text: '굽기 손실률이 0%입니다. 실제 빵은 굽고 식히는 동안 수분이 빠져 8~15% 정도 줄어듭니다.' });
+    }
+    if (loss >= 0.35) {
+      warnings.push({ level: 'warn', text: '손실률 ' + round1(loss * 100) + '%는 일반 범위(8~15%)를 크게 벗어납니다. 직접 계량한 실측값인지 확인해 주세요.' });
+    }
+    if (fInfo.note) warnings.push({ level: 'info', text: fInfo.note });
+    var zero = ings.filter(function (i) { return nonNeg(i.grams) <= 0; }).map(function (i) { return i.name || '(이름 없음)'; });
+    if (zero.length) warnings.push({ level: 'warn', text: '무게가 0인 재료: ' + zero.join(', ') });
+    if (baseDough > 0 && scaledDough < 1) {
+      warnings.push({ level: 'error', text: '배율이 너무 작아 반죽이 1g 미만으로 계산됩니다. 배율·목표 중량을 확인해 주세요.' });
+    }
+    if (view && view.mode === 'pieces' && doughPerPiece != null && doughPerPiece < 30 && scaledDough > 0) {
+      warnings.push({ level: 'warn', text: '개당 반죽이 ' + round1(doughPerPiece) + 'g으로 매우 작습니다. 입력값을 확인해 주세요.' });
+    }
+
+    return {
+      mode: fInfo.mode,
+      factor: factor,
+      loss: loss,
+      baseFlourG: baseFlour,
+      baseDoughG: baseDough,
+      scaledFlourG: scaledFlour,
+      scaledDoughG: scaledDough,
+      totalBakersPct: totalBakersPct(ings),
+      scaledTotalBakersPct: scaledFlour > 0 ? scaledDough / scaledFlour * 100 : null,
+      hydrationPct: hydrationPct(ings),
+      expectedFinishedG: expectedFinished,
+      doughPerPiece: doughPerPiece,
+      expectedPerPiece: expectedPerPiece,
+      rows: table,
+      warnings: warnings
+    };
+  }
+
+  return {
+    num: num, nonNeg: nonNeg, sum: sum, round1: round1,
+    flourTotal: flourTotal, doughTotal: doughTotal,
+    bakersPct: bakersPct, totalBakersPct: totalBakersPct, hydrationPct: hydrationPct,
+    roundSmart: roundSmart, normalizeLoss: normalizeLoss,
+    factorFromMultiplier: factorFromMultiplier,
+    factorFromDoughWeight: factorFromDoughWeight,
+    factorFromPieces: factorFromPieces,
+    computeFactor: computeFactor,
+    scaleIngredients: scaleIngredients,
+    buildResult: buildResult
+  };
+});
+</script>
+<script>/* BakeryCore 확장 — 원가계산 · 단가표 · 월별 단가변화 · 발주서/영수증 파싱
+   core.js 를 그대로 두고 기능만 덧붙인다. Node/브라우저 양쪽에서 동작. */
+(function (root) {
+  'use strict';
+  var C = (typeof module === 'object' && module.exports) ? require('./core.js') : root.BakeryCore;
+  var num = C.num, nonNeg = C.nonNeg, sum = C.sum, round1 = C.round1;
+
+  var UNITS = ['kg', 'g', 'ml', 'L', '개', '매', '봉', '팩', '박스', '포', '통', '장'];
+  var COUNT_UNITS = { '개': 1, '매': 1, '봉': 1, '팩': 1, '박스': 1, '포': 1, '통': 1, '장': 1 };
+  var WEIGHT_UNITS = { 'kg': 1000, 'g': 1, 'L': 1000, 'ml': 1 };
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  /* 이름 비교용 정규화: 괄호·기호·공백 제거, 소문자 */
+  function normName(s) {
+    return String(s == null ? '' : s).toLowerCase()
+      .replace(/\([^)]*\)/g, ' ')
+      .replace(/\[[^\]]*\]/g, ' ')
+      .replace(/[^0-9a-z가-힣]+/g, '');
+  }
+
+  /* 1단위(kg·개 등) 가격 = 구매가 ÷ 규격(packSize) */
+  function wonPerUnit(item) {
+    if (!item) return null;
+    var ps = nonNeg(item.packSize) || 1;
+    var p = nonNeg(item.unitPrice);
+    if (!(p > 0)) return null;
+    return p / ps;
+  }
+  /* 1단위가 몇 g 인가 (무게 단위가 아니면 null) */
+  function gramPerUnit(unit, pieceGram) {
+    if (WEIGHT_UNITS[unit] != null) return WEIGHT_UNITS[unit];
+    if (COUNT_UNITS[unit]) {
+      var pg = nonNeg(pieceGram);
+      return pg > 0 ? pg : null;
+    }
+    return 1;
+  }
+  function wonPerGram(item) {
+    var wpu = wonPerUnit(item);
+    if (wpu == null) return null;
+    var g = gramPerUnit(item.unit, item.pieceGram);
+    if (!g) return null;
+    return wpu / g;
+  }
+  function wonPerKg(item) {
+    var g = wonPerGram(item);
+    return g == null ? null : g * 1000;
+  }
+  /* 표시 기준: 무게단위 → 원/kg, 개수단위 → 원/개 */
+  function metricOf(item) {
+    if (!item) return { label: '원', value: null };
+    if (WEIGHT_UNITS[item.unit] != null) return { label: '원/kg', value: wonPerKg(item) };
+    return { label: '원/' + (item.unit || '개'), value: wonPerUnit(item) };
+  }
+
+  /* 단가 목록 → 이름 조회 인덱스 (최신 항목이 이김) */
+  function buildPriceIndex(items) {
+    var byName = {}, byBase = {};
+    (items || []).forEach(function (it) {
+      if (!it || !it.name) return;
+      var k = normName(it.name);
+      if (!k) return;
+      var prev = byName[k];
+      if (!prev || String(it.date || '') >= String(prev.date || '')) byName[k] = it;
+      byBase[k] = it;
+    });
+    return { byName: byName, byBase: byBase };
+  }
+  function matchPrice(index, name) {
+    if (!index || !index.byName) return null;
+    var k = normName(name);
+    if (!k) return null;
+    if (index.byName[k]) return index.byName[k];
+    if (k.length < 2) return null;
+    var keys = Object.keys(index.byName);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (key.length < 2) continue;
+      if (k.indexOf(key) > -1 || key.indexOf(k) > -1) return index.byName[key];
+    }
+    return null;
+  }
+
+  /* 재료별 재료비 분해 */
+  function materialBreakdown(recipe, factor, index) {
+    var f = num(factor) > 0 ? num(factor) : 1;
+    return ((recipe && recipe.ingredients) || []).map(function (ing) {
+      var grams = nonNeg(ing.grams) * f;
+      var table = matchPrice(index, ing.name);
+      var wpg = table ? wonPerGram(table) : null;
+      var source = 'table';
+      if (wpg == null) {
+        if (ing.group === 'water') { wpg = 0; source = 'free'; }
+        else {
+          var manual = nonNeg(ing.pricePerKg);
+          if (manual > 0) { wpg = manual / 1000; source = 'manual'; }
+          else { wpg = null; source = 'none'; }
+        }
+      }
+      return {
+        id: ing.id, name: ing.name, group: ing.group, grams: grams,
+        wonPerGram: wpg,
+        cost: wpg == null ? 0 : grams * wpg,
+        source: source,
+        matchedName: table ? table.name : null,
+        wonPerKg: wpg == null ? null : wpg * 1000
+      };
+    });
+  }
+
+  /* 원가 5단계 + 판매가 */
+  function computeCost(recipe, opts, index) {
+    var r = recipe || {};
+    var o = opts || {};
+    var c = r.cost || {};
+    var factor = num(o.factor) > 0 ? num(o.factor) : 1;
+    var inc = o.include || { labor: true, overhead: true, packaging: true };
+
+    var breakdown = materialBreakdown(r, factor, index);
+    var material = sum(breakdown.map(function (b) { return b.cost; }));
+
+    var basePieces = nonNeg(o.pieceCount) || nonNeg(c.pieceCount) || 1;
+    var pieces = Math.max(1, Math.round(basePieces * factor));
+
+    var laborWage = nonNeg(o.hourlyWage) || nonNeg(c.hourlyWage);
+    var laborMin = nonNeg(o.laborMinutes) || nonNeg(c.laborMinutes);
+    var labor = inc.labor ? (laborWage / 60) * laborMin * factor : 0;
+    var overhead = inc.overhead ? nonNeg(o.overheadPerBatch || c.overheadPerBatch) * factor : 0;
+
+    var packPer = nonNeg(o.packagingPerPiece) || nonNeg(c.packagingPerPiece);
+    var packaging = inc.packaging ? packPer * pieces : 0;
+
+    var materialPerPiece = pieces > 0 ? material / pieces : material;
+    var total = material + labor + overhead + packaging;
+    var perPiece = pieces > 0 ? total / pieces : total;
+
+    var margin = o.marginPct != null && isFinite(num(o.marginPct)) ? num(o.marginPct) : (isFinite(num(c.targetMarginPct)) && num(c.targetMarginPct) > 0 ? num(c.targetMarginPct) : 40);
+    if (margin < 0) margin = 0;
+    if (margin > 95) margin = 95;
+
+    var sellExact = margin < 100 ? perPiece / (1 - margin / 100) : perPiece;
+    var sellPerPiece = Math.round(sellExact);
+    var sellMaterialOnlyExact = margin < 100 ? materialPerPiece / (1 - margin / 100) : materialPerPiece;
+    var sellMaterialOnly = Math.round(sellMaterialOnlyExact);
+
+    var missing = breakdown.filter(function (b) { return b.source === 'none'; }).map(function (b) { return b.name || '(이름 없음)'; });
+    var warnings = [];
+    if (missing.length) warnings.push({ level: 'warn', text: '단가 미입력 재료: ' + missing.join(', ') + ' — 단가표에 등록하면 자동 반영됩니다.' });
+    if (total <= 0) warnings.push({ level: 'error', text: '재료비가 0원입니다. 재료 무게와 단가를 확인해 주세요.' });
+    if (sellPerPiece < perPiece) warnings.push({ level: 'error', text: '판매가가 원가보다 낮아 적자입니다.' });
+    if (margin === 0) warnings.push({ level: 'info', text: '마진 0% — 원가 그대로입니다.' });
+
+    return {
+      factor: factor,
+      breakdown: breakdown,
+      material: material,
+      labor: labor,
+      overhead: overhead,
+      packaging: packaging,
+      total: total,
+      pieces: pieces,
+      materialPerPiece: materialPerPiece,
+      laborPerPiece: pieces > 0 ? labor / pieces : 0,
+      overheadPerPiece: pieces > 0 ? overhead / pieces : 0,
+      packagingPerPiece: pieces > 0 ? packaging / pieces : 0,
+      totalPerPiece: perPiece,
+      marginPct: margin,
+      sellPerPiece: sellPerPiece,
+      sellExact: sellExact,
+      sellMaterialOnly: sellMaterialOnly,
+      profitPerPiece: sellPerPiece - perPiece,
+      materialRatio: total > 0 ? material / total : 0,
+      wonPerGram: null,
+      missing: missing,
+      warnings: warnings
+    };
+  }
+
+  /* ── 월별 단가 변화 ───────────────────────── */
+  function monthKey(d) {
+    var dt = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    return dt.getFullYear() + '-' + pad2(dt.getMonth() + 1);
+  }
+
+  function monthlyMatrix(history, opts) {
+    var o = opts || {};
+    var count = o.months || 6;
+    var now = o.now ? new Date(o.now) : new Date();
+    var months = [];
+    for (var i = count - 1; i >= 0; i--) {
+      var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        key: monthKey(d),
+        label: (d.getMonth() === 0 ? (d.getFullYear() + '년 ') : '') + (d.getMonth() + 1) + '월'
+      });
+    }
+    var firstKey = months[0].key, map = {};
+
+    (history || []).forEach(function (h) {
+      if (!h || !h.name) return;
+      var key = monthKey(h.date);
+      if (!key || key < firstKey) return;
+      var k = normName(h.name) + '|' + (h.unit || 'g');
+      if (!map[k]) map[k] = { name: h.name, unit: h.unit || 'g', byMonth: {} };
+      var mt = metricOf(h);
+      if (mt.value == null) return;
+      var slot = map[k].byMonth[key];
+      if (!slot || String(h.date) >= String(slot.date)) {
+        map[k].byMonth[key] = { price: mt.value, date: String(h.date) };
+      }
+    });
+
+    var rows = Object.keys(map).map(function (k) {
+      var e = map[k];
+      var cells = [], prev = null;
+      months.forEach(function (m) {
+        var slot = e.byMonth[m.key] || null;
+        var cell = { key: m.key, price: slot ? slot.price : null, date: slot ? slot.date : null, delta: null, pct: null };
+        if (slot) {
+          if (prev != null && prev > 0) {
+            cell.delta = slot.price - prev;
+            cell.pct = (slot.price - prev) / prev * 100;
+          }
+          prev = slot.price;
+        }
+        cells.push(cell);
+      });
+      var filled = cells.filter(function (c) { return c.price != null; });
+      var first = filled[0] || null, last = filled.length ? filled[filled.length - 1] : null;
+      return {
+        name: e.name,
+        unit: e.unit,
+        metric: metricOf({ name: e.name, unit: e.unit, unitPrice: 1 }).label,
+        cells: cells,
+        first: first ? first.price : null,
+        last: last ? last.price : null,
+        changePct: (first && last && first.price > 0) ? (last.price - first.price) / first.price * 100 : null,
+        points: filled.length
+      };
+    });
+
+    rows.sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'ko'); });
+    var movers = rows.filter(function (r) { return r.changePct != null && Math.abs(r.changePct) >= 0.01; });
+    return {
+      months: months, rows: rows,
+      summary: {
+        items: rows.length,
+        up: movers.filter(function (r) { return r.changePct > 0; }).length,
+        down: movers.filter(function (r) { return r.changePct < 0; }).length
+      }
+    };
+  }
+
+  /* 특정 품목의 직전 단가 (해당 날짜 포함 이전) */
+  function latestPrice(history, name, unit, onDate) {
+    var k = normName(name), best = null;
+    (history || []).forEach(function (h) {
+      if (!h || normName(h.name) !== k) return;
+      if (unit && h.unit && h.unit !== unit) return;
+      if (onDate && String(h.date) > String(onDate)) return;
+      if (!best || String(h.date) >= String(best.date)) best = h;
+    });
+    return best;
+  }
+
+  /* 입력 시점 단가 변화 */
+  function priceChanges(history, rows, onDate) {
+    var d = onDate || new Date().toISOString().slice(0, 10);
+    return (rows || []).map(function (r) {
+      var prev = latestPrice(history, r.name, r.unit, d);
+      var mNew = metricOf(r);
+      var newNorm = mNew.value != null ? mNew.value : nonNeg(r.unitPrice);
+      var out = {
+        name: r.name, unit: r.unit, metric: mNew.label,
+        prevPrice: null, newPrice: newNorm,
+        delta: null, pct: null, level: 'new', prevDate: null
+      };
+      if (prev) {
+        var mp = metricOf(prev);
+        var prevNorm = mp.value != null ? mp.value : nonNeg(prev.unitPrice);
+        out.prevPrice = prevNorm;
+        out.prevDate = prev.date;
+        out.delta = newNorm - prevNorm;
+        out.pct = prevNorm > 0 ? out.delta / prevNorm * 100 : null;
+        out.level = out.delta > 0 ? 'up' : (out.delta < 0 ? 'down' : 'same');
+      }
+      return out;
+    });
+  }
+
+  /* ── 발주서 / 영수증 텍스트 파싱 ─────────── */
+  var UNIT_ALT = '킬로그램|킬로|kg|KG|Kg|그램|g|G|ml|ML|Ml|리터|L|l|개|ea|EA|매|봉지|봉|팩|박스|포|통|장';
+  var QTY_UNIT_RE = new RegExp('(\\d[\\d,]*(?:\\.\\d+)?)\\s*(' + UNIT_ALT + ')');
+  var UNIT_ONLY_RE = new RegExp('(' + UNIT_ALT + ')');
+  var UNIT_MAP = {
+    'kg': 'kg', 'KG': 'kg', 'Kg': 'kg', '킬로': 'kg', '킬로그램': 'kg',
+    'g': 'g', 'G': 'g', '그램': 'g',
+    'ml': 'ml', 'ML': 'ml', 'Ml': 'ml',
+    'L': 'L', 'l': 'L', '리터': 'L',
+    '개': '개', 'ea': '개', 'EA': '개', '매': '매', '봉': '봉', '봉지': '봉',
+    '팩': '팩', '박스': '박스', '포': '포', '통': '통', '장': '장'
+  };
+  var SKIP_RE = /^(합계|총액|총합|소계|공급가액|세액|부가세|과세|면세|봉사료|결제|카드|현금|수표|잔액|거스름|승인|일시|일자|날짜|사업자|등록번호|대표|주소|전화|팩스|tel|TEL|FAX|fax|NO\b|번호|품명|품목|단가|수량|금액|비고|영수증|발주서|주문서|거래명세|합계금액|배송|연락처|담당)/i;
+
+  function parseReceiptLine(line) {
+    var raw = String(line == null ? '' : line);
+    if (raw.normalize) { try { raw = raw.normalize('NFKC'); } catch (e) {} }
+    var s = raw.replace(/[\u2460-\u2473]/g, ' ').replace(/[•·*]/g, ' ').replace(/\s+/g, ' ').trim();
+    s = s.replace(/^[-\u2013\u2014:]+\s*/, '');
+    if (!s) return { skip: true, reason: 'blank' };
+    if (SKIP_RE.test(s)) return { skip: true, reason: 'header', raw: raw.trim() };
+    if (!/\d/.test(s)) return { skip: true, reason: 'no-digit', raw: raw.trim() };
+
+    var qm = s.match(QTY_UNIT_RE);
+    var unit = null, packSize = 1, namePart = s, rest = '';
+
+    if (qm) {
+      packSize = parseFloat(String(qm[1]).replace(/,/g, '')) || 1;
+      unit = UNIT_MAP[qm[2]] || '개';
+      namePart = s.slice(0, qm.index);
+      rest = s.slice(qm.index + qm[0].length);
+    } else {
+      var um = s.match(UNIT_ONLY_RE);
+      if (um) {
+        unit = UNIT_MAP[um[1]] || '개';
+        namePart = s.slice(0, um.index);
+        rest = s.slice(um.index + um[0].length);
+      }
+    }
+
+    var money = null, qty = 1;
+    var mul = s.match(/(\d[\d,]*)\s*[x×X]\s*(\d[\d,]*)/);
+    if (mul) {
+      qty = parseFloat(mul[1].replace(/,/g, '')) || 1;
+      money = parseFloat(mul[2].replace(/,/g, '')) || null;
+      namePart = s.slice(0, s.indexOf(mul[0]));
+      if (!unit) unit = '개';
+    } else {
+      if (!qm && !unit) {
+        var n0 = s.match(/\d[\d,]*(?:\.\d+)?/);
+        if (n0) { namePart = s.slice(0, n0.index); rest = s.slice(n0.index); }
+      }
+      var nums = (rest.match(/\d[\d,]*(?:\.\d+)?/g) || []).map(function (x) { return parseFloat(x.replace(/,/g, '')); }).filter(function (v) { return v > 0; });
+      if (nums.length) {
+        money = nums[0];
+        if (nums.length > 1) qty = nums[1];
+      }
+    }
+
+    var name = namePart.replace(/^[:\-\s]+/, '').replace(/[:\-\s]+$/, '').replace(/\s+/g, ' ').trim();
+    if (!name || money == null || !(money > 0)) return { skip: true, reason: 'no-price', raw: raw.trim() };
+    if (!unit) unit = '개';
+
+    var conf = 3;
+    if (!qm) conf = 2;
+    if (!qm && !UNIT_ONLY_RE.test(s)) conf = 1;
+    if (/\d/.test(name)) conf = Math.min(conf, 2);
+    if (name.length < 2) conf = 1;
+    if (qty >= 2 && money * qty >= 200000) conf = 1;
+
+    return {
+      skip: false, name: name, unit: unit, packSize: packSize,
+      unitPrice: money, qty: qty,
+      total: money * qty,
+      confidence: conf,
+      raw: raw.trim()
+    };
+  }
+
+  function parseReceiptText(text) {
+    var src = String(text == null ? '' : text);
+    if (src.normalize) { try { src = src.normalize('NFKC'); } catch (e) {} }
+    var lines = src.split(/\r?\n/);
+    var rows = [], skipped = [];
+    lines.forEach(function (line) {
+      var r = parseReceiptLine(line);
+      if (r.skip) { if (r.raw) skipped.push(r.raw); return; }
+      r.id = 'p' + (rows.length + 1);
+      rows.push(r);
+    });
+    return { rows: rows, skipped: skipped, stats: { lines: lines.length, parsed: rows.length } };
+  }
+
+  /* ── 레시피 사진 텍스트 파싱 (재료 → g) ──── */
+  function guessGroup(name) {
+    var n = String(name || '');
+    if (/물\b|우유| Milk/i.test(n) && !/우유/.test(n)) return 'water';
+    if (/소금/.test(n)) return 'salt';
+    if (/이스트|효모|yeast/i.test(n)) return 'yeast';
+    if (/설탕|꿀|시럽|당|슈가/.test(n)) return 'sugar';
+    if (/버터|기름|오일|마가린|쇼트닝|라드/.test(n)) return 'fat';
+    if (/우유|크림|치즈|요거트/.test(n)) return 'dairy';
+    if (/계란|달걀|난백|난황/.test(n)) return 'egg';
+    if (/가루|분|밀|호밀|글루텐|전분/.test(n)) return 'flour';
+    if (/^물$|정수|생수/.test(n)) return 'water';
+    return 'other';
+  }
+
+  function parseRecipeText(text) {
+    var src = String(text == null ? '' : text);
+    if (src.normalize) { try { src = src.normalize('NFKC'); } catch (e) {} }
+    var rows = [], skipped = [];
+    src.split(/\r?\n/).forEach(function (line) {
+      var raw = String(line || '');
+      var s = raw.replace(/[\u2460-\u2473]/g, ' ').replace(/[•·*]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!s) return;
+      if (SKIP_RE.test(s)) { skipped.push(raw.trim()); return; }
+      if (!/\d/.test(s)) { skipped.push(raw.trim()); return; }
+
+      var pct = null;
+      var pm = s.match(/(\d+(?:\.\d+)?)\s*%/);
+      if (pm) pct = parseFloat(pm[1]);
+
+      var qm = s.match(QTY_UNIT_RE);
+      var unit = 'g', grams = null, namePart = s;
+      if (qm) {
+        var q = parseFloat(String(qm[1]).replace(/,/g, '')) || 0;
+        unit = UNIT_MAP[qm[2]] || 'g';
+        namePart = s.slice(0, qm.index);
+        if (unit === 'kg' || unit === 'L') grams = q * 1000;
+        else if (unit === 'g' || unit === 'ml') grams = q;
+        else grams = null;
+      } else {
+        var n0 = s.match(/\d[\d,]*(?:\.\d+)?/);
+        if (n0) { namePart = s.slice(0, n0.index); grams = parseFloat(n0[0].replace(/,/g, '')); }
+      }
+      var name = namePart.replace(/^[:\-\s\d]+/, '').replace(/[:\-\s]+$/, '').replace(/\s+/g, ' ').trim();
+      if (!name || !(grams > 0)) { skipped.push(raw.trim()); return; }
+
+      var conf = 3;
+      if (grams == null) conf = 1;
+      if (unit === '개' || unit === '컵' || unit === '큰술') conf = 1;
+      if (name.length < 1) conf = 1;
+
+      rows.push({
+        id: 'g' + (rows.length + 1),
+        name: name, grams: grams == null ? 0 : grams, unit: unit,
+        bakersPct: pct, group: guessGroup(name),
+        confidence: conf, raw: raw.trim()
+      });
+    });
+    return { rows: rows, skipped: skipped, stats: { parsed: rows.length } };
+  }
+
+  C.normName = normName;
+  C.UNITS = UNITS;
+  C.wonPerUnit = wonPerUnit;
+  C.wonPerGram = wonPerGram;
+  C.wonPerKg = wonPerKg;
+  C.metricOf = metricOf;
+  C.gramPerUnit = gramPerUnit;
+  C.buildPriceIndex = buildPriceIndex;
+  C.matchPrice = matchPrice;
+  C.materialBreakdown = materialBreakdown;
+  C.computeCost = computeCost;
+  C.monthKey = monthKey;
+  C.monthlyMatrix = monthlyMatrix;
+  C.latestPrice = latestPrice;
+  C.priceChanges = priceChanges;
+  C.parseReceiptLine = parseReceiptLine;
+  C.parseReceiptText = parseReceiptText;
+  C.parseRecipeText = parseRecipeText;
+  C.guessGroup = guessGroup;
+
+  if (typeof module === 'object' && module.exports) module.exports = C;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+</script>
+<script>/* ==== 00-state.js ==== */
+/* 공통 상태·저장소·헬퍼 */
+var C = window.BakeryCore;
+var KEY = 'bakery.v2';
+var OLD_KEY = 'bakery.p1.v1';
+
+var GROUPS = [
+  { v: 'flour', t: '밀가루' }, { v: 'water', t: '물' }, { v: 'salt', t: '소금' },
+  { v: 'yeast', t: '이스트' }, { v: 'sugar', t: '당류' }, { v: 'fat', t: '지방' },
+  { v: 'dairy', t: '유제품' }, { v: 'egg', t: '계란' }, { v: 'other', t: '기타' }
+];
+var GROUP_LABEL = {};
+GROUPS.forEach(function (g) { GROUP_LABEL[g.v] = g.t; });
+
+var state = {
+  tab: 'recipe',
+  recipes: [], activeId: null,
+  priceItems: [], priceHistory: [],
+  view: { mode: 'multiplier', multiplier: 1, targetDough: 1760, pieceCount: 4, pieceWeight: 440, piecesMode: 'dough' },
+  cost: { recipeId: null, factor: 1, include: { labor: true, overhead: true, packaging: true }, marginPct: 40, months: 6 },
+  receipt: { text: '', rows: [], skipped: [], stage: 'idle', confirmed: false, report: null },
+  recipeOcr: { text: '', rows: [], stage: 'idle', confirmed: false },
+  printId: null,
+  saveTimer: null
+};
+
+/* ── 헬퍼 ───────────────────────────────── */
+function uid(p) { return (p || 'id') + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7); }
+function nowISO() { return new Date().toISOString(); }
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function fmt(n, d) {
+  if (n == null || !isFinite(n)) return '–';
+  var digits = d == null ? 1 : d;
+  var p = Math.pow(10, digits);
+  var v = Math.round(n * p) / p;
+  return v.toLocaleString('ko-KR', { maximumFractionDigits: digits });
+}
+function won(n) { if (n == null || !isFinite(n)) return '–'; return Math.round(n).toLocaleString('ko-KR') + '원'; }
+function pct(n) { return n == null || !isFinite(n) ? '–' : fmt(n, 1) + '%'; }
+function signed(n, digits) {
+  if (n == null || !isFinite(n)) return '–';
+  var v = fmt(Math.abs(n), digits == null ? 0 : digits);
+  return (n > 0 ? '+' : (n < 0 ? '−' : '')) + v;
+}
+function $(s, root) { return (root || document).querySelector(s); }
+function $$(s, root) { return Array.prototype.slice.call((root || document).querySelectorAll(s)); }
+
+function activeRecipe() {
+  return state.recipes.filter(function (r) { return r.id === state.activeId; })[0] || state.recipes[0] || null;
+}
+function recipeById(id) { return state.recipes.filter(function (r) { return r.id === id; })[0] || null; }
+function priceOf(recipeId) {
+  var r = recipeById(recipeId);
+  return C.buildPriceIndex(state.priceItems);
+}
+
+/* ── 저장소 ─────────────────────────────── */
+function setStatus(txt, err) {
+  var el = document.getElementById('status');
+  if (!el) return;
+  el.textContent = txt;
+  el.className = 'status' + (err ? ' err' : '');
+}
+function save() {
+  var payload = {
+    v: 2, savedAt: nowISO(), activeId: state.activeId, tab: state.tab,
+    recipes: state.recipes, priceItems: state.priceItems, priceHistory: state.priceHistory,
+    view: state.view, cost: state.cost
+  };
+  try {
+    localStorage.setItem(KEY, JSON.stringify(payload));
+    var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    setStatus('기기에 저장됨 · ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()), false);
+  } catch (e) { setStatus('저장 실패 (저장 공간 부족?)', true); }
+}
+function saveSoon() {
+  setStatus('입력 중…', false);
+  clearTimeout(state.saveTimer);
+  state.saveTimer = setTimeout(save, 400);
+}
+
+function load() {
+  var raw = null;
+  try { raw = localStorage.getItem(KEY); } catch (e) {}
+  if (raw) {
+    try {
+      var d = JSON.parse(raw);
+      if (d && Array.isArray(d.recipes) && d.recipes.length) {
+        state.recipes = d.recipes;
+        state.priceItems = d.priceItems || [];
+        state.priceHistory = d.priceHistory || [];
+        state.activeId = d.activeId || d.recipes[0].id;
+        if (d.view) state.view = Object.assign(state.view, d.view);
+        if (d.cost) state.cost = Object.assign(state.cost, d.cost);
+        if (d.tab) state.tab = d.tab;
+        return;
+      }
+    } catch (e) {}
+  }
+  try {
+    var old = localStorage.getItem(OLD_KEY);
+    if (old) {
+      var o = JSON.parse(old);
+      if (o && o.recipes && o.recipes.length) {
+        state.recipes = o.recipes;
+        state.activeId = o.activeId || o.recipes[0].id;
+        state.priceItems = seedPrices();
+        state.priceHistory = seedHistory();
+        return;
+      }
+    }
+  } catch (e) {}
+  state.recipes = seedRecipes();
+  state.priceItems = seedPrices();
+  state.priceHistory = seedHistory();
+  state.activeId = state.recipes[0].id;
+}
+
+/* ── 초기 데이터 ─────────────────────────── */
+function seedRecipes() {
+  var t = nowISO();
+  var cost = { pieceCount: 4, laborMinutes: 90, hourlyWage: 10000, overheadPerBatch: 1200, packagingPerPiece: 250, targetMarginPct: 40 };
+  return [
+    {
+      id: 'r-basic', title: '기본 식빵 (통밀 20%)', category: 'bread', lossRate: 12,
+      note: '문서 예시와 동일한 기준 레시피 (밀가루 1,000g = 100%)',
+      steps: '① 1차 발효 27℃ 60분\n② 분할 440g × 4개, 둥글리기 20분\n③ 성형 후 2차 발효 35℃ 40분\n④ 190℃ 35분 굽기 → 식힘 2시간',
+      memo: '', rev: 1, createdAt: t, updatedAt: t, allergens: ['밀', '우유'], cost: JSON.parse(JSON.stringify(cost)),
+      ingredients: [
+        { id: 'i1', name: '강력분', group: 'flour', grams: 900, pricePerKg: 0, unit: 'g' },
+        { id: 'i2', name: '통밀가루', group: 'flour', grams: 100, pricePerKg: 0, unit: 'g' },
+        { id: 'i3', name: '물', group: 'water', grams: 650, pricePerKg: 0, unit: 'g' },
+        { id: 'i4', name: '소금', group: 'salt', grams: 20, pricePerKg: 0, unit: 'g' },
+        { id: 'i5', name: '인스턴트 이스트', group: 'yeast', grams: 10, pricePerKg: 0, unit: 'g' },
+        { id: 'i6', name: '설탕', group: 'sugar', grams: 40, pricePerKg: 0, unit: 'g' },
+        { id: 'i7', name: '버터(무염)', group: 'fat', grams: 50, pricePerKg: 0, unit: 'g' }
+      ]
+    },
+    {
+      id: 'r-cookie', title: '버터 쿠키 (기본 반죽)', category: 'cookie', lossRate: 18,
+      note: '쿠키는 수분 증발이 커서 손실률이 빵보다 큽니다.',
+      steps: '① 버터·설탕 크림화 5분\n② 계란 3회 나눠 투입\n③ 박력분 체질 후 혼합\n④ 170℃ 12~14분',
+      memo: '', rev: 1, createdAt: t, updatedAt: t, allergens: ['밀', '우유', '계란'],
+      cost: { pieceCount: 24, laborMinutes: 60, hourlyWage: 10000, overheadPerBatch: 900, packagingPerPiece: 80, targetMarginPct: 40 },
+      ingredients: [
+        { id: 'c1', name: '박력분', group: 'flour', grams: 300, pricePerKg: 0, unit: 'g' },
+        { id: 'c2', name: '버터(무염)', group: 'fat', grams: 200, pricePerKg: 0, unit: 'g' },
+        { id: 'c3', name: '설탕', group: 'sugar', grams: 120, pricePerKg: 0, unit: 'g' },
+        { id: 'c4', name: '계란', group: 'egg', grams: 50, pricePerKg: 0, unit: 'g' },
+        { id: 'c5', name: '소금', group: 'salt', grams: 2, pricePerKg: 0, unit: 'g' }
+      ]
+    }
+  ];
+}
+
+function seedPrices() {
+  return [
+    { id: 'pi1', name: '강력분', unit: 'kg', packSize: 25, unitPrice: 35000, qty: 1, pieceGram: 0, supplier: '대성식자재', date: '2026-11-20' },
+    { id: 'pi2', name: '통밀가루', unit: 'kg', packSize: 1, unitPrice: 2200, qty: 1, pieceGram: 0, supplier: '대성식자재', date: '2026-11-20' },
+    { id: 'pi3', name: '버터(무염)', unit: 'kg', packSize: 1, unitPrice: 12000, qty: 1, pieceGram: 0, supplier: '대성식자재', date: '2026-11-20' },
+    { id: 'pi4', name: '인스턴트 이스트', unit: 'g', packSize: 500, unitPrice: 6000, qty: 1, pieceGram: 0, supplier: '대성식자재', date: '2026-11-20' },
+    { id: 'pi5', name: '소금', unit: 'kg', packSize: 1, unitPrice: 700, qty: 1, pieceGram: 0, supplier: '대성식자재', date: '2026-11-20' },
+    { id: 'pi6', name: '설탕', unit: 'kg', packSize: 1, unitPrice: 1300, qty: 1, pieceGram: 0, supplier: '대성식자재', date: '2026-11-20' },
+    { id: 'pi7', name: '박력분', unit: 'kg', packSize: 1, unitPrice: 1300, qty: 1, pieceGram: 0, supplier: '대성식자재', date: '2026-11-20' },
+    { id: 'pi8', name: '계란', unit: '개', packSize: 30, unitPrice: 6000, qty: 1, pieceGram: 50, supplier: '대성식자재', date: '2026-11-20' }
+  ];
+}
+
+function seedHistory() {
+  var base = [
+    { name: '강력분', unit: 'kg', packSize: 25, unitPrice: 32000, qty: 1, supplier: '대성식자재' },
+    { name: '버터(무염)', unit: 'kg', packSize: 1, unitPrice: 10500, qty: 1, supplier: '대성식자재' },
+    { name: '설탕', unit: 'kg', packSize: 1, unitPrice: 1200, qty: 1, supplier: '대성식자재' },
+    { name: '계란', unit: '개', packSize: 30, unitPrice: 5500, qty: 1, pieceGram: 50, supplier: '대성식자재' },
+    { name: '소금', unit: 'kg', packSize: 1, unitPrice: 800, qty: 1, supplier: '대성식자재' }
+  ];
+  var actual = seedPrices();
+  var out = [];
+  var months = ['2026-07-15', '2026-08-14', '2026-09-16', '2026-10-19', '2026-11-20'];
+  months.forEach(function (date, idx) {
+    base.forEach(function (b) {
+      var row = JSON.parse(JSON.stringify(b));
+      row.id = uid('h');
+      row.date = date;
+      if (idx === months.length - 1) {
+        var cur = actual.filter(function (a) { return a.name === b.name; })[0];
+        if (cur) { row.packSize = cur.packSize; row.unitPrice = cur.unitPrice; }
+      } else {
+        var f = 1 + (idx * 0.025) + (b.name === '버터(무염)' ? idx * 0.045 : 0);
+        row.unitPrice = Math.round(b.unitPrice * f / 50) * 50;
+      }
+      out.push(row);
+    });
+  });
+  return out;
+}
+
+/* ── 상단 탭 ─────────────────────────────── */
+var TABS = [
+  { v: 'recipe', t: '레시피', ic: '🥖' },
+  { v: 'cost', t: '원가계산', ic: '💰' },
+  { v: 'price', t: '단가표', ic: '📊' },
+  { v: 'receipt', t: '발주서·영수증', ic: '🧾' },
+  { v: 'io', t: '내보내기·설정', ic: '📤' }
+];
+
+function renderNav() {
+  var nav = document.getElementById('nav');
+  if (!nav) return;
+  nav.innerHTML = TABS.map(function (t) {
+    return '<button class="navbtn' + (state.tab === t.v ? ' on' : '') + '" data-tab="' + t.v + '">' +
+      '<span class="nic">' + t.ic + '</span><span class="ntx">' + t.t + '</span></button>';
+  }).join('');
+}
+
+function renderView() {
+  renderNav();
+  var box = document.getElementById('view');
+  if (!box) return;
+  if (state.tab === 'cost') box.innerHTML = viewCost();
+  else if (state.tab === 'price') box.innerHTML = viewPrice();
+  else if (state.tab === 'receipt') box.innerHTML = viewReceipt();
+  else if (state.tab === 'io') box.innerHTML = viewIO();
+  else box.innerHTML = viewRecipe();
+  afterRender();
+}
+
+function afterRender() {
+  if (state.tab === 'io') renderPrintRoot();
+}
+
+/* ==== 10-recipe.js ==== */
+/* 레시피 탭 — 목록 · 편집 · 베이커스% · 배율 · 사진 OCR */
+function viewRecipe() {
+  var r = activeRecipe();
+  if (!r) return '<div class="card">레시피가 없습니다.</div>';
+  var res = C.buildResult(r, state.view);
+  var v = state.view;
+
+  var list = state.recipes.map(function (x) {
+    var rr = C.buildResult(x, { mode: 'multiplier', multiplier: 1 });
+    return '<button class="list-item' + (x.id === state.activeId ? ' active' : '') + '" data-select="' + esc(x.id) + '">' +
+      '<span class="li-title">' + esc(x.title || '(제목 없음)') + '</span>' +
+      '<span class="li-meta">재료 ' + (x.ingredients || []).length + '종 · ' + fmt(rr.baseDoughG, 0) + 'g · B% ' + fmt(rr.totalBakersPct, 1) + '</span>' +
+      '</button>';
+  }).join('');
+
+  var modePanel;
+  if (v.mode === 'multiplier') {
+    modePanel = '<div class="mode-row">' +
+      '<div class="chips">' + [1, 1.5, 2, 3].map(function (m) {
+        return '<button class="chip' + (Math.abs(v.multiplier - m) < 0.001 ? ' on' : '') + '" data-mult="' + m + '">' + m + '배</button>';
+      }).join('') + '</div>' +
+      '<div class="field" style="width:140px"><span>직접 입력</span><input id="multCustom" type="number" step="0.05" min="0.05" max="50" value="' + esc(v.multiplier) + '"></div>' +
+      '</div><div class="hint" style="margin-top:6px">밀가루 무게만 정하면 모든 재료가 같은 비율로 자동 계산됩니다.</div>';
+  } else if (v.mode === 'dough') {
+    modePanel = '<div class="mode-row">' +
+      '<div class="field" style="width:190px"><span>목표 반죽 총중량 (g)</span><input id="targetDough" type="number" min="1" step="10" value="' + esc(v.targetDough) + '"></div>' +
+      '<div class="hint" style="padding-bottom:10px">기준 ' + fmt(res.baseDoughG, 0) + 'g → 배율 ' + fmt(res.factor, 3) + '×</div>' +
+      '</div>';
+  } else {
+    modePanel = '<div class="mode-row">' +
+      '<div class="field" style="width:110px"><span>개수</span><input id="pieceCount" type="number" min="1" step="1" value="' + esc(v.pieceCount) + '"></div>' +
+      '<div class="field" style="width:140px"><span>개당 무게 (g)</span><input id="pieceWeight" type="number" min="1" step="1" value="' + esc(v.pieceWeight) + '"></div>' +
+      '<div class="radios"><label><input type="radio" name="pmode" value="dough"' + (v.piecesMode === 'dough' ? ' checked' : '') + '> 반죽 기준</label>' +
+      '<label><input type="radio" name="pmode" value="finished"' + (v.piecesMode === 'finished' ? ' checked' : '') + '> 완성품 기준</label></div>' +
+      '</div><div class="hint" style="margin-top:6px">"완성품 기준"은 굽고 식힌 뒤 무게. 손실률 ' + fmt(res.loss * 100, 1) + '%를 역산합니다.</div>';
+  }
+
+  var rows = res.rows.map(function (x) {
+    var ing = (r.ingredients || []).filter(function (i) { return i.id === x.id; })[0] || {};
+    var opts = GROUPS.map(function (g) {
+      return '<option value="' + g.v + '"' + (ing.group === g.v ? ' selected' : '') + '>' + g.t + '</option>';
+    }).join('');
+    return '<tr class="' + (x.group === 'flour' ? 'row-flour' : '') + '">' +
+      '<td style="min-width:140px"><input class="i-name" data-f="name" data-id="' + esc(x.id) + '" value="' + esc(ing.name || '') + '" placeholder="재료명"></td>' +
+      '<td style="width:100px"><select class="i-group" data-f="group" data-id="' + esc(x.id) + '">' + opts + '</select></td>' +
+      '<td class="num" style="width:90px"><input class="i-grams" data-f="grams" data-id="' + esc(x.id) + '" type="number" min="0" step="1" value="' + esc(ing.grams) + '"></td>' +
+      '<td class="num v-pct" style="width:70px" data-pct="' + esc(x.id) + '">' + pct(x.bakersPct) + '</td>' +
+      '<td class="num" style="width:96px"><span class="v-scaled" data-scaled="' + esc(x.id) + '">' + fmt(x.scaledGrams, 1) + '</span><span class="unit"> g</span></td>' +
+      '<td style="width:32px"><button class="i-del" data-del="' + esc(x.id) + '">×</button></td></tr>';
+  }).join('');
+
+  var warnHtml = res.warnings.length
+    ? '<div class="warnWrap">' + res.warnings.map(warnItem).join('') + '</div>' : '';
+
+  var perLabel = (v.mode === 'pieces' && v.pieceCount > 0) ? '개당 완성' : '수분율';
+  var perValue = (v.mode === 'pieces' && v.pieceCount > 0) ? fmt(res.expectedPerPiece, 1) : fmt(res.hydrationPct, 1);
+  var perUnit = (v.mode === 'pieces' && v.pieceCount > 0) ? 'g' : '%';
+  var perSub = (v.mode === 'pieces' && v.pieceCount > 0) ? '반죽 ' + fmt(res.doughPerPiece, 1) + 'g/개' : '물 ÷ 밀가루';
+
+  return '<div class="layout">' +
+    '<aside class="sidebar"><button id="newRecipe" class="btn-new">+ 새 레시피</button><div class="list">' + list + '</div>' +
+    '<div class="side-note">데이터는 <strong>이 브라우저(기기)</strong>에 저장됩니다. 클라우드 저장·링크 공유는 <strong>내보내기·설정</strong> 탭에서 Google Drive를 연결하면 켜집니다.</div></aside>' +
+    '<section class="content">' +
+      '<div class="card">' +
+        '<div class="row between"><input class="title-input" data-f="title" value="' + esc(r.title) + '" placeholder="레시피 이름">' +
+        '<span class="meta">rev ' + (r.rev || 1) + '</span></div>' +
+        '<div class="grid3">' +
+          '<div class="field"><span>레시피 메모</span><input data-f="note" value="' + esc(r.note || '') + '" placeholder="예: 27℃ 12시간 숙성"></div>' +
+          '<div class="field"><span>분류</span><select data-f="category">' +
+            [['bread', '빵'], ['cookie', '쿠키'], ['cake', '케이크'], ['other', '기타']].map(function (o) {
+              return '<option value="' + o[0] + '"' + (r.category === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+            }).join('') + '</select></div>' +
+          '<div class="field"><span>굽기 손실률 (%)</span><input data-f="lossRate" type="number" min="0" max="40" step="0.5" value="' + esc(fmt(r.lossRate, 1)) + '"><small>빵 8~15% / 쿠키 18~26%</small></div>' +
+        '</div>' +
+        '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn sm" data-act="recipePhoto">📷 사진으로 재료 입력</button>' +
+          '<button class="btn sm" data-act="recipePhotoPanel">사진/텍스트 입력 열기</button>' +
+          '<span class="hint">사진에서 재료와 무게를 읽어 표로 채웁니다. 저장 전 <strong>확인 체크</strong>가 필요합니다.</span>' +
+        '</div>' +
+      '</div>' +
+      '<div id="recipeOcrHost"></div>' +
+      '<div class="card">' +
+        '<h2>배율 계산 <span class="tag">밀가루 = 100%</span></h2>' +
+        '<div class="tabs">' +
+          '<button data-mode="multiplier" class="' + (v.mode === 'multiplier' ? 'on' : '') + '">배율</button>' +
+          '<button data-mode="dough" class="' + (v.mode === 'dough' ? 'on' : '') + '">반죽 중량</button>' +
+          '<button data-mode="pieces" class="' + (v.mode === 'pieces' ? 'on' : '') + '">개수 × 무게</button>' +
+        '</div>' + modePanel +
+        '<div class="strip">' +
+          '<div class="strip-item"><span class="k">배율 적용 밀가루</span><span class="v"><span id="sFlour">' + fmt(res.scaledFlourG, 0) + '</span><small>g</small></span><span class="s">기준 ' + fmt(res.baseFlourG, 0) + 'g</span></div>' +
+          '<div class="strip-item"><span class="k">반죽 총중량</span><span class="v"><span id="sDough">' + fmt(res.scaledDoughG, 0) + '</span><small>g</small></span><span class="s">기준 ' + fmt(res.baseDoughG, 0) + 'g</span></div>' +
+          '<div class="strip-item"><span class="k">예상 완성 중량</span><span class="v"><span id="sFinish">' + fmt(res.expectedFinishedG, 0) + '</span><small>g</small></span><span class="s">손실 ' + fmt(res.loss * 100, 1) + '%</span></div>' +
+          '<div class="strip-item"><span class="k">' + perLabel + '</span><span class="v"><span id="sPer">' + perValue + '</span><small>' + perUnit + '</small></span><span class="s">' + perSub + '</span></div>' +
+        '</div>' +
+        '<div class="hint" style="margin-top:8px">전체 B% <strong id="hPct">' + fmt(res.scaledTotalBakersPct, 1) + '%</strong> · 수분율 <strong>' + fmt(res.hydrationPct, 1) + '%</strong> · 배율 <strong id="hFac">' + fmt(res.factor, 3) + '×</strong></div>' +
+      '</div>' +
+      warnHtml +
+      '<div class="card">' +
+        '<h2>재료 <span class="tag">' + res.rows.length + '종</span></h2>' +
+        '<div class="tableWrap"><table><thead><tr>' +
+          '<th>재료</th><th>분류</th><th class="num">기준량(g)</th><th class="num">B%</th><th class="num">배율 적용(g)</th><th></th>' +
+        '</tr></thead><tbody>' + rows + '</tbody>' +
+        '<tfoot><tr><td colspan="2"><strong>합계</strong></td>' +
+          '<td class="num"><strong id="tBase">' + fmt(res.baseDoughG, 0) + '</strong> g</td>' +
+          '<td class="num"><strong id="tPct">' + fmt(res.totalBakersPct, 1) + '</strong>%</td>' +
+          '<td class="num"><span class="v-scaled" id="tScaled">' + fmt(res.scaledDoughG, 0) + '</span> g</td><td></td></tr></tfoot></table></div>' +
+        '<button class="btn-add" id="addIng">+ 재료 추가</button>' +
+      '</div>' +
+      '<div class="card"><h2>제조 공정</h2>' +
+        '<textarea class="steps" data-f="steps" placeholder="① 1차 발효 27℃ 60분&#10;② 분할 440g × 4개">' + esc(r.steps || '') + '</textarea>' +
+        '<div class="memo-label">출력용 수기 메모 (A4 인쇄 시 빈 줄)</div><div class="memo" style="height:162px"></div>' +
+      '</div>' +
+      '<div class="actions">' +
+        '<button class="btn primary" data-act="dup">레시피 복제</button>' +
+        '<button class="btn" data-act="resetView">배율 초기화</button>' +
+        '<button class="btn danger" data-act="del">이 레시피 삭제</button>' +
+      '</div>' +
+    '</section></div>';
+}
+
+function warnItem(w) {
+  var ic = w.level === 'error' ? '⛔' : (w.level === 'warn' ? '⚠️' : 'ℹ️');
+  return '<div class="warn-item ' + w.level + '"><span class="ic">' + ic + '</span><span>' + esc(w.text) + '</span></div>';
+}
+
+/* 레시피 편집 중 숫자만 갱신 (포커스 유지) */
+function patchRecipeNumbers() {
+  var r = activeRecipe();
+  if (!r) return;
+  var res = C.buildResult(r, state.view);
+  res.rows.forEach(function (x) {
+    var p = $('[data-pct="' + x.id + '"]'); if (p) p.textContent = pct(x.bakersPct);
+    var s = $('[data-scaled="' + x.id + '"]'); if (s) s.textContent = fmt(x.scaledGrams, 1);
+  });
+  var set = function (id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
+  set('sFlour', fmt(res.scaledFlourG, 0));
+  set('sDough', fmt(res.scaledDoughG, 0));
+  set('sFinish', fmt(res.expectedFinishedG, 0));
+  set('tBase', fmt(res.baseDoughG, 0));
+  set('tPct', fmt(res.totalBakersPct, 1));
+  set('tScaled', fmt(res.scaledDoughG, 0));
+  set('hPct', fmt(res.scaledTotalBakersPct, 1) + '%');
+  set('hFac', fmt(res.factor, 3) + '×');
+  var per = document.getElementById('sPer');
+  if (per) per.textContent = (state.view.mode === 'pieces' && state.view.pieceCount > 0) ? fmt(res.expectedPerPiece, 1) : fmt(res.hydrationPct, 1);
+
+  var old = $('.warnWrap');
+  if (old) old.remove();
+  if (res.warnings.length) {
+    var div = document.createElement('div');
+    div.className = 'warnWrap';
+    div.innerHTML = res.warnings.map(warnItem).join('');
+    var cards = $$('#view .card');
+    if (cards[2]) cards[2].parentNode.insertBefore(div, cards[2]);
+  }
+  saveSoon();
+}
+
+/* ── 레시피 사진 OCR 패널 ──────────────── */
+function recipeOcrHost() {
+  var st = state.recipeOcr;
+  if (st.stage === 'idle') return '';
+  var rows = st.rows.map(function (x, i) {
+    return '<tr>' +
+      '<td><input class="cell" data-ofield="name" data-oidx="' + i + '" value="' + esc(x.name) + '"></td>' +
+      '<td style="width:110px"><select class="cell" data-ofield="group" data-oidx="' + i + '">' +
+        GROUPS.map(function (g) { return '<option value="' + g.v + '"' + (x.group === g.v ? ' selected' : '') + '>' + g.t + '</option>'; }).join('') +
+      '</select></td>' +
+      '<td class="num" style="width:100px"><input class="cell num" type="number" min="0" step="1" data-ofield="grams" data-oidx="' + i + '" value="' + esc(x.grams) + '"></td>' +
+      '<td class="num" style="width:70px">' + (x.bakersPct != null ? fmt(x.bakersPct, 1) + '%' : '–') + '</td>' +
+      '<td style="width:80px"><span class="conf c' + x.confidence + '">' + ['', '낮음', '보통', '높음'][x.confidence] + '</span></td>' +
+      '<td style="width:32px"><button class="i-del" data-odel="' + i + '">×</button></td>' +
+      '</tr>';
+  }).join('');
+
+  return '<div class="card ocr-card">' +
+    '<h2>사진 → 재료 자동입력 <span class="tag">검수 필수</span></h2>' +
+    '<div class="ocr-grid">' +
+      '<div class="ocr-left">' +
+        '<input type="file" id="recipeImageInput" accept="image/*" capture="environment" class="file-input">' +
+        '<div class="ocr-hint">레시피 사진을 고르면 글자를 읽어 표로 만듭니다. 한글+숫자 인식은 <strong>오인식이 흔합니다</strong> — 아래 표에서 반드시 고쳐 주세요.</div>' +
+        '<div class="field" style="margin-top:8px"><span>인식된 텍스트 (직접 수정 가능)</span>' +
+          '<textarea id="recipeOcrText" class="steps" style="min-height:96px" placeholder="강력분 1000g&#10;물 650g&#10;소금 20g">' + esc(st.text || '') + '</textarea></div>' +
+        '<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">' +
+          '<button class="btn sm" data-act="recipeOcrRun">텍스트 → 표로 변환</button>' +
+          '<button class="btn sm" data-act="recipeOcrClose">닫기</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ocr-right">' +
+        (st.rows.length ? '<div class="tableWrap"><table><thead><tr><th>재료</th><th>분류</th><th class="num">무게(g)</th><th class="num">B%</th><th>신뢰</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+          '<label class="confirm"><input type="checkbox" id="recipeOcrConfirm"' + (st.confirmed ? ' checked' : '') + '> 위 재료와 무게가 사진과 일치함을 확인했습니다.</label>' +
+          '<button class="btn primary" data-act="recipeOcrApply"' + (st.confirmed ? '' : ' disabled') + '>이 재료로 레시피 채우기</button>'
+        : '<div class="empty">사진을 올리거나 텍스트를 붙여넣고 <strong>표로 변환</strong>을 누르세요.</div>') +
+      '</div>' +
+    '</div></div>';
+}
+
+/* ── 레시피 탭 이벤트 ──────────────────── */
+function recipeInput(e) {
+  var t = e.target, f = t.getAttribute('data-f'), r = activeRecipe();
+  if (!r) return;
+
+  if (t.id === 'multCustom') {
+    state.view.multiplier = Math.max(0.05, C.num(t.value) || 1);
+    patchRecipeNumbers();
+    $$('[data-mult]').forEach(function (b) { b.classList.toggle('on', Math.abs(C.num(b.getAttribute('data-mult')) - state.view.multiplier) < 0.001); });
+    return;
+  }
+  if (t.id === 'targetDough') { state.view.targetDough = C.num(t.value); patchRecipeNumbers(); return; }
+  if (t.id === 'pieceCount') { state.view.pieceCount = C.num(t.value); patchRecipeNumbers(); return; }
+  if (t.id === 'pieceWeight') { state.view.pieceWeight = C.num(t.value); patchRecipeNumbers(); return; }
+
+  if (t.id === 'recipeOcrText') { state.recipeOcr.text = t.value; return; }
+
+  var of = t.getAttribute('data-ofield');
+  if (of) {
+    var idx = +t.getAttribute('data-oidx');
+    var row = state.recipeOcr.rows[idx];
+    if (!row) return;
+    if (of === 'grams') row.grams = C.nonNeg(t.value);
+    else row[of] = t.value;
+    if (of !== 'grams' && of !== 'name') return;
+    return;
+  }
+
+  var id = t.getAttribute('data-id');
+  if (id) {
+    var ing = (r.ingredients || []).filter(function (i) { return i.id === id; })[0];
+    if (!ing) return;
+    if (f === 'grams') ing.grams = C.nonNeg(t.value);
+    else ing[f] = t.value;
+    r.updatedAt = nowISO();
+    if (f === 'group') { renderView(); return; }
+    patchRecipeNumbers();
+    return;
+  }
+
+  if (f === 'lossRate') r.lossRate = C.num(t.value);
+  else if (f) r[f] = t.value;
+  r.updatedAt = nowISO();
+  patchRecipeNumbers();
+}
+
+function recipeClick(e) {
+  var r = activeRecipe();
+  if (!r) return;
+
+  var sel = e.target.closest('[data-select]');
+  if (sel) {
+    state.activeId = sel.getAttribute('data-select');
+    state.view.mode = 'multiplier';
+    state.view.multiplier = 1;
+    state.recipeOcr = { text: '', rows: [], stage: 'idle', confirmed: false };
+    renderView(); save(); return;
+  }
+  if (e.target.id === 'newRecipe') {
+    var t = nowISO();
+    var nr = {
+      id: uid('r'), title: '새 레시피', category: 'bread', lossRate: 12, note: '', steps: '', memo: '',
+      rev: 1, createdAt: t, updatedAt: t, allergens: [],
+      cost: { pieceCount: 4, laborMinutes: 90, hourlyWage: 10000, overheadPerBatch: 1200, packagingPerPiece: 250, targetMarginPct: 40 },
+      ingredients: [
+        { id: uid('i'), name: '강력분', group: 'flour', grams: 1000, pricePerKg: 0, unit: 'g' },
+        { id: uid('i'), name: '물', group: 'water', grams: 650, pricePerKg: 0, unit: 'g' },
+        { id: uid('i'), name: '소금', group: 'salt', grams: 20, pricePerKg: 0, unit: 'g' },
+        { id: uid('i'), name: '이스트', group: 'yeast', grams: 10, pricePerKg: 0, unit: 'g' }
+      ]
+    };
+    state.recipes.unshift(nr);
+    state.activeId = nr.id;
+    renderView(); save();
+    var ti = $('[data-f="title"]'); if (ti) { ti.focus(); ti.select(); }
+    return;
+  }
+
+  var chip = e.target.closest('[data-mult]');
+  if (chip) { state.view.multiplier = C.num(chip.getAttribute('data-mult')); renderView(); save(); return; }
+
+  var tab = e.target.closest('[data-mode]');
+  if (tab) { state.view.mode = tab.getAttribute('data-mode'); renderView(); save(); return; }
+
+  var del = e.target.closest('[data-del]');
+  if (del) {
+    var did = del.getAttribute('data-del');
+    r.ingredients = r.ingredients.filter(function (i) { return i.id !== did; });
+    renderView(); save(); return;
+  }
+  if (e.target.id === 'addIng') {
+    r.ingredients.push({ id: uid('i'), name: '', group: 'other', grams: 0, pricePerKg: 0, unit: 'g' });
+    renderView(); save(); return;
+  }
+
+  var act = e.target.getAttribute && e.target.getAttribute('data-act');
+  if (act === 'dup') {
+    var cp = JSON.parse(JSON.stringify(r));
+    cp.id = uid('r'); cp.title = r.title + ' (사본)'; cp.rev = 1; cp.createdAt = nowISO(); cp.updatedAt = nowISO();
+    cp.ingredients.forEach(function (i) { i.id = uid('i'); });
+    state.recipes.unshift(cp); state.activeId = cp.id; renderView(); save(); return;
+  }
+  if (act === 'resetView') { state.view.multiplier = 1; renderView(); save(); return; }
+  if (act === 'del') {
+    if (!confirm('"' + (r.title || '레시피') + '"를 삭제할까요?')) return;
+    state.recipes = state.recipes.filter(function (x) { return x.id !== r.id; });
+    if (!state.recipes.length) state.recipes = seedRecipes();
+    state.activeId = state.recipes[0].id;
+    renderView(); save(); return;
+  }
+
+  if (act === 'recipePhoto' || act === 'recipePhotoPanel') {
+    state.recipeOcr.stage = 'open';
+    var host = document.getElementById('recipeOcrHost');
+    if (host) {
+      host.innerHTML = recipeOcrHost();
+      if (act === 'recipePhoto') { var fi = document.getElementById('recipeImageInput'); if (fi) fi.click(); }
+    }
+    return;
+  }
+  if (act === 'recipeOcrClose') { state.recipeOcr = { text: '', rows: [], stage: 'idle', confirmed: false }; var h2 = document.getElementById('recipeOcrHost'); if (h2) h2.innerHTML = ''; return; }
+  if (act === 'recipeOcrRun') {
+    var parsed = C.parseRecipeText(state.recipeOcr.text || '');
+    state.recipeOcr.rows = parsed.rows;
+    state.recipeOcr.confirmed = false;
+    var h3 = document.getElementById('recipeOcrHost');
+    if (h3) h3.innerHTML = recipeOcrHost();
+    if (!parsed.rows.length) alert('재료를 찾지 못했습니다.\n"강력분 1000g" 처럼 재료명과 무게를 한 줄씩 적어 주세요.');
+    return;
+  }
+  if (act === 'recipeOcrApply') {
+    if (!state.recipeOcr.confirmed) { alert('먼저 "확인했습니다" 체크를 해 주세요.'); return; }
+    r.ingredients = state.recipeOcr.rows.map(function (x) {
+      return { id: uid('i'), name: x.name, group: x.group, grams: x.grams, pricePerKg: 0, unit: 'g' };
+    });
+    state.recipeOcr = { text: '', rows: [], stage: 'idle', confirmed: false };
+    renderView(); save(); return;
+  }
+
+  var odel = e.target.getAttribute && e.target.getAttribute('data-odel');
+  if (odel != null) {
+    state.recipeOcr.rows.splice(+odel, 1);
+    var h4 = document.getElementById('recipeOcrHost'); if (h4) h4.innerHTML = recipeOcrHost();
+    return;
+  }
+}
+
+/* ==== 20-cost.js ==== */
+/* 원가계산 탭 — 5단계 · 마진 · 적자 경고 · 재료비만 비교 */
+function viewCost() {
+  var r = recipeById(state.cost.recipeId) || activeRecipe();
+  if (!r) return '<div class="card">레시피가 없습니다.</div>';
+  state.cost.recipeId = r.id;
+
+  var index = C.buildPriceIndex(state.priceItems);
+  var c = r.cost || {};
+  var opts = {
+    factor: state.cost.factor, include: state.cost.include, marginPct: state.cost.marginPct,
+    pieceCount: c.pieceCount, laborMinutes: c.laborMinutes, hourlyWage: c.hourlyWage,
+    overheadPerBatch: c.overheadPerBatch, packagingPerPiece: c.packagingPerPiece
+  };
+  var cost = C.computeCost(r, opts, index);
+
+  var recipeOpts = state.recipes.map(function (x) {
+    return '<option value="' + esc(x.id) + '"' + (x.id === r.id ? ' selected' : '') + '>' + esc(x.title) + '</option>';
+  }).join('');
+
+  return '<div class="card">' +
+    '<h2>원가계산 <span class="tag">5단계</span></h2>' +
+    '<div class="grid3">' +
+      '<div class="field"><span>레시피</span><select id="costRecipe">' + recipeOpts + '</select></div>' +
+      '<div class="field"><span>배율</span><input id="costFactor" type="number" min="0.1" step="0.1" value="' + esc(state.cost.factor) + '"></div>' +
+      '<div class="field"><span>생산 개수 (배율 반영 전)</span><input id="costPieces" type="number" min="1" step="1" value="' + esc(c.pieceCount || 1) + '"></div>' +
+    '</div>' +
+    '<div class="grid3">' +
+      '<div class="field"><span>작업 시간 (분)</span><input id="costMinutes" type="number" min="0" step="5" value="' + esc(c.laborMinutes || 0) + '"></div>' +
+      '<div class="field"><span>시급 (원)</span><input id="costWage" type="number" min="0" step="1000" value="' + esc(c.hourlyWage || 0) + '"></div>' +
+      '<div class="field"><span>오버헤드 (배치, 원)</span><input id="costOverhead" type="number" min="0" step="100" value="' + esc(c.overheadPerBatch || 0) + '">' +
+        '<small>전기·가스·감가 합산</small></div>' +
+    '</div>' +
+    '<div class="grid3">' +
+      '<div class="field"><span>포장재 (개당, 원)</span><input id="costPack" type="number" min="0" step="10" value="' + esc(c.packagingPerPiece || 0) + '"></div>' +
+      '<div class="field"><span>목표 마진 (%)</span><input id="costMargin" type="number" min="0" max="95" step="1" value="' + esc(state.cost.marginPct) + '">' +
+        '<small>판매가 기준: 판매가 = 원가 ÷ (1−마진)</small></div>' +
+      '<div class="field"><span>포함 항목</span><div class="chips" style="padding-top:2px">' +
+        '<button class="chip sm' + (state.cost.include.labor ? ' on' : '') + '" data-inc="labor">인건비</button>' +
+        '<button class="chip sm' + (state.cost.include.overhead ? ' on' : '') + '" data-inc="overhead">오버헤드</button>' +
+        '<button class="chip sm' + (state.cost.include.packaging ? ' on' : '') + '" data-inc="packaging">포장비</button>' +
+      '</div></div>' +
+    '</div>' +
+  '</div>' +
+  '<div id="costOut">' + costBody(r, cost) + '</div>';
+}
+
+function costBody(r, cost) {
+  var mats = cost.breakdown.filter(function (b) { return b.grams > 0; });
+  var rows = mats.map(function (b) {
+    return '<tr>' +
+      '<td>' + esc(b.name || '–') + (b.source === 'none' ? ' <span class="badge bad">단가없음</span>' : '') + '</td>' +
+      '<td class="num">' + fmt(b.grams, 1) + '</td>' +
+      '<td class="num">' + (b.wonPerKg == null ? '–' : fmt(b.wonPerKg, 0)) + '</td>' +
+      '<td class="num"><strong>' + won(b.cost) + '</strong></td>' +
+      '</tr>';
+  }).join('');
+
+  var line = function (label, value, sub, cls) {
+    return '<div class="cost-line ' + (cls || '') + '"><span class="cl-k">' + label + (sub ? '<small>' + sub + '</small>' : '') + '</span>' +
+      '<span class="cl-v">' + won(value) + '</span></div>';
+  };
+
+  var warn = cost.warnings.length ? '<div class="warnWrap">' + cost.warnings.map(warnItem).join('') + '</div>' : '';
+
+  return warn +
+    '<div class="cost-grid">' +
+      '<div class="card">' +
+        '<h2>① 재료비 <span class="tag">' + mats.length + '종</span></h2>' +
+        '<div class="tableWrap"><table><thead><tr><th>재료</th><th class="num">무게(g)</th><th class="num">원/kg</th><th class="num">재료비</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table></div>' +
+        '<div class="hint" style="margin-top:8px">단가는 단가표 → 재료명 자동 매칭. 매칭 없으면 레시피의 직접입력 단가 사용.</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h2>⑤ 원가 · 판매가</h2>' +
+        '<div class="cost-lines">' +
+          line('재료비', cost.material, '합계') +
+          line('인건비', cost.labor, (r.cost && r.cost.laborMinutes ? r.cost.laborMinutes + '분 × 시급' : '') + (cost.factor !== 1 ? ' ×배율' : '')) +
+          line('오버헤드', cost.overhead, '전기·가스·감가') +
+          line('포장비', cost.packaging, cost.pieces + '개') +
+          line('총원가', cost.total, '', 'sum') +
+        '</div>' +
+        '<div class="strip" style="grid-template-columns:1fr 1fr">' +
+          '<div class="strip-item"><span class="k">개당 원가</span><span class="v">' + fmt(cost.totalPerPiece, 0) + '<small>원</small></span><span class="s">' + cost.pieces + '개 기준</span></div>' +
+          '<div class="strip-item"><span class="k">판매가 (마진 ' + fmt(cost.marginPct, 0) + '%)</span><span class="v">' + fmt(cost.sellPerPiece, 0) + '<small>원</small></span><span class="s">개당 이익 ' + fmt(cost.profitPerPiece, 0) + '원</span></div>' +
+        '</div>' +
+        '<div class="compare">' +
+          '<div class="cmp-row"><span>재료비만 볼 때 원가</span><strong>' + won(cost.materialPerPiece) + ' /개</strong></div>' +
+          '<div class="cmp-row"><span>재료비만 + 같은 마진 판매가</span><strong class="muted">' + fmt(cost.sellMaterialOnly, 0) + '원</strong></div>' +
+          '<div class="cmp-row"><span>전체 원가 반영 판매가</span><strong class="accent">' + fmt(cost.sellPerPiece, 0) + '원</strong></div>' +
+          '<div class="cmp-row"><span>재료원가율 (재료비 ÷ 총원가)</span><strong>' + fmt(cost.materialRatio * 100, 1) + '%</strong></div>' +
+        '</div>' +
+        '<div class="hint">가공비를 넣으면 판매가가 ' + fmt(cost.sellPerPiece / Math.max(1, cost.sellMaterialOnly), 1) + '배가 됩니다. 집에서 먹는 빵과 파는 빵의 차이입니다.</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function patchCost() {
+  var r = recipeById(state.cost.recipeId) || activeRecipe();
+  if (!r) return;
+  r.cost = r.cost || {};
+  r.cost.pieceCount = C.nonNeg($('#costPieces') && $('#costPieces').value) || r.cost.pieceCount || 1;
+  r.cost.laborMinutes = C.num($('#costMinutes') && $('#costMinutes').value);
+  r.cost.hourlyWage = C.num($('#costWage') && $('#costWage').value);
+  r.cost.overheadPerBatch = C.num($('#costOverhead') && $('#costOverhead').value);
+  r.cost.packagingPerPiece = C.num($('#costPack') && $('#costPack').value);
+  r.cost.targetMarginPct = C.num($('#costMargin') && $('#costMargin').value);
+  state.cost.marginPct = r.cost.targetMarginPct;
+  state.cost.factor = Math.max(0.1, C.num($('#costFactor') && $('#costFactor').value) || 1);
+
+  var index = C.buildPriceIndex(state.priceItems);
+  var cost = C.computeCost(r, {
+    factor: state.cost.factor, include: state.cost.include, marginPct: state.cost.marginPct,
+    pieceCount: r.cost.pieceCount, laborMinutes: r.cost.laborMinutes, hourlyWage: r.cost.hourlyWage,
+    overheadPerBatch: r.cost.overheadPerBatch, packagingPerPiece: r.cost.packagingPerPiece
+  }, index);
+  var out = document.getElementById('costOut');
+  if (out) out.innerHTML = costBody(r, cost);
+  saveSoon();
+}
+
+function costClick(e) {
+  var inc = e.target.getAttribute && e.target.getAttribute('data-inc');
+  if (inc) {
+    state.cost.include[inc] = !state.cost.include[inc];
+    e.target.classList.toggle('on', state.cost.include[inc]);
+    patchCost();
+    return;
+  }
+}
+
+/* ==== 30-price.js ==== */
+/* 단가표 탭 — 현재 단가 · 월별 변화표 · 품목별 이력 */
+function viewPrice() {
+  var index = C.buildPriceIndex(state.priceItems);
+  var items = state.priceItems.slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'ko'); });
+
+  var rows = items.map(function (it) {
+    var m = C.metricOf(it);
+    var prev = C.latestPrice(state.priceHistory.filter(function (h) { return h.id !== it.id && String(h.date) < String(it.date || ''); }), it.name, it.unit, it.date);
+    var chg = null;
+    if (prev) {
+      var mp = C.metricOf(prev);
+      if (mp.value > 0 && m.value != null) chg = (m.value - mp.value) / mp.value * 100;
+    }
+    var used = state.recipes.some(function (r) {
+      return (r.ingredients || []).some(function (g) { return C.matchPrice(index, g.name) === it || C.normName(g.name) === C.normName(it.name); });
+    });
+    return '<tr>' +
+      '<td><strong>' + esc(it.name) + '</strong>' + (used ? ' <span class="badge ok">사용중</span>' : '') + '</td>' +
+      '<td>' + esc(it.unit) + '</td>' +
+      '<td class="num">' + fmt(it.packSize, 0) + '</td>' +
+      '<td class="num">' + fmt(it.unitPrice, 0) + '</td>' +
+      '<td class="num"><strong>' + fmt(m.value, 0) + '</strong> <span class="unit">' + m.label + '</span></td>' +
+      '<td class="num">' + (chg == null ? '<span class="muted">–</span>' : '<span class="chg ' + (chg > 0 ? 'up' : chg < 0 ? 'down' : '') + '">' + (chg > 0 ? '▲' : chg < 0 ? '▼' : '–') + ' ' + fmt(Math.abs(chg), 1) + '%</span>') + '</td>' +
+      '<td class="hide-sm">' + esc(it.date || '') + '</td>' +
+      '<td style="width:60px"><button class="i-del" data-pdel="' + esc(it.id) + '">×</button></td>' +
+      '</tr>';
+  }).join('');
+
+  var mm = C.monthlyMatrix(state.priceHistory, { months: state.cost.months });
+  var head = mm.months.map(function (m) { return '<th class="num">' + m.label + '</th>'; }).join('');
+  var mrows = mm.rows.map(function (row) {
+    var cells = row.cells.map(function (c) {
+      if (c.price == null) return '<td class="num"><span class="nodata">–</span></td>';
+      var cls = c.pct == null ? '' : (c.pct > 0.01 ? 'up' : c.pct < -0.01 ? 'down' : '');
+      var tag = c.pct == null ? '' : '<span class="mom ' + cls + '">' + (c.pct > 0.01 ? '▲' : c.pct < -0.01 ? '▼' : '') + fmt(Math.abs(c.pct), 1) + '%</span>';
+      return '<td class="num ' + cls + '"><span class="pv">' + fmt(c.price, 0) + '</span>' + tag + '</td>';
+    }).join('');
+    var tot = row.changePct == null ? '<span class="muted">–</span>' :
+      '<span class="chg ' + (row.changePct > 0 ? 'up' : row.changePct < 0 ? 'down' : '') + '">' + (row.changePct > 0 ? '▲' : row.changePct < 0 ? '▼' : '') + ' ' + fmt(Math.abs(row.changePct), 1) + '%</span>';
+    return '<tr><td><strong>' + esc(row.name) + '</strong> <span class="unit">' + esc(row.metric) + '</span></td>' + cells + '<td class="num">' + tot + '</td></tr>';
+  }).join('');
+
+  return '<div class="card">' +
+    '<h2>현재 단가표 <span class="tag">' + items.length + '품목</span></h2>' +
+    '<div class="tableWrap"><table><thead><tr>' +
+      '<th>품목</th><th>단위</th><th class="num">규격</th><th class="num">구매가</th><th class="num">1단위 단가</th><th class="num">직전 대비</th><th class="hide-sm">기준일</th><th></th>' +
+    '</tr></thead><tbody>' + (rows || '<tr><td colspan="8" class="empty">품목이 없습니다. 발주서·영수증 탭에서 사진으로 추가하세요.</td></tr>') + '</tbody></table></div>' +
+    '<div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">' +
+      '<button class="btn sm primary" data-act="gotoReceipt">🧾 발주서로 단가 입력</button>' +
+      '<button class="btn sm" data-act="addPrice">+ 품목 직접 추가</button>' +
+      '<span class="hint">1단위 단가 = 구매가 ÷ 규격 (예: 25kg 35,000원 → 1,400원/kg)</span>' +
+    '</div>' +
+  '</div>' +
+
+  '<div class="card">' +
+    '<h2>월별 단가 변화 <span class="tag">최근 ' + mm.months.length + '개월</span></h2>' +
+    '<div class="mm-summary">' +
+      '<span>품목 <strong>' + mm.summary.items + '</strong></span>' +
+      '<span class="up">상승 <strong>' + mm.summary.up + '</strong></span>' +
+      '<span class="down">하락 <strong>' + mm.summary.down + '</strong></span>' +
+      '<span class="hint">무게 단위는 <strong>원/kg</strong>, 개수 단위는 <strong>원/개</strong>로 통일해 비교합니다</span>' +
+    '</div>' +
+    '<div class="tableWrap"><table class="mm"><thead><tr><th>품목</th>' + head + '<th class="num">기간 변동</th></tr></thead>' +
+    '<tbody>' + (mrows || '<tr><td colspan="' + (mm.months.length + 2) + '" class="empty">이력이 없습니다. 발주서를 입력하면 월별로 쌓입니다.</td></tr>') + '</tbody></table></div>' +
+    '<div class="legend"><span class="up">▲ 상승</span><span class="down">▼ 하락</span><span class="hint">숫자는 직전 입력 대비 변동률</span></div>' +
+  '</div>' +
+
+  '<div class="card"><h2>품목 이력 <span class="tag">최근 12건</span></h2>' +
+    '<div class="hist">' + historyList() + '</div></div>';
+}
+
+function historyList() {
+  var h = state.priceHistory.slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); }).slice(0, 12);
+  if (!h.length) return '<div class="empty">이력이 없습니다.</div>';
+  return h.map(function (x) {
+    var m = C.metricOf(x);
+    return '<div class="hist-row"><span class="hd">' + esc(x.date) + '</span>' +
+      '<span class="hn">' + esc(x.name) + '</span>' +
+      '<span class="hu">' + fmt(x.packSize, 0) + esc(x.unit) + ' / ' + fmt(x.unitPrice, 0) + '원</span>' +
+      '<span class="hv">' + fmt(m.value, 0) + ' ' + m.label + '</span>' +
+      '<span class="hs">' + esc(x.supplier || '') + '</span></div>';
+  }).join('');
+}
+
+function priceClick(e) {
+  if (e.target.getAttribute && e.target.getAttribute('data-act') === 'gotoReceipt') {
+    state.tab = 'receipt'; renderView(); save(); return;
+  }
+  if (e.target.getAttribute && e.target.getAttribute('data-act') === 'addPrice') {
+    state.priceItems.push({ id: uid('pi'), name: '새 품목', unit: 'kg', packSize: 1, unitPrice: 0, qty: 1, pieceGram: 0, supplier: '', date: todayStr() });
+    renderView(); save(); return;
+  }
+  var del = e.target.getAttribute && e.target.getAttribute('data-pdel');
+  if (del) {
+    state.priceItems = state.priceItems.filter(function (x) { return x.id !== del; });
+    renderView(); save(); return;
+  }
+}
+
+function priceInput(e) {
+  var t = e.target;
+  if (t.id === 'mmMonths') {
+    state.cost.months = Math.max(3, Math.min(12, C.num(t.value) || 6));
+    renderView(); save();
+  }
+}
+
+/* ==== 40-receipt.js ==== */
+/* 발주서·영수증 → 단가표 자동 입력 (OCR + 검수 필수) */
+function viewReceipt() {
+  var st = state.receipt;
+  var rows = st.rows.map(function (x, i) {
+    var m = C.metricOf({ name: x.name, unit: x.unit, packSize: x.packSize, unitPrice: x.unitPrice, pieceGram: x.pieceGram });
+    var isCount = (x.unit !== 'kg' && x.unit !== 'g' && x.unit !== 'L' && x.unit !== 'ml');
+    return '<tr class="' + (x.confidence <= 1 ? 'lowconf' : '') + '">' +
+      '<td style="min-width:120px"><input class="cell" data-rfield="name" data-ridx="' + i + '" value="' + esc(x.name || '') + '"></td>' +
+      '<td class="num" style="width:74px"><input class="cell num" type="number" min="0" step="0.1" data-rfield="packSize" data-ridx="' + i + '" value="' + esc(x.packSize) + '"></td>' +
+      '<td style="width:78px"><select class="cell" data-rfield="unit" data-ridx="' + i + '">' +
+        C.UNITS.map(function (u) { return '<option value="' + u + '"' + (x.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
+      '</select></td>' +
+      '<td class="num" style="width:96px"><input class="cell num" type="number" min="0" step="10" data-rfield="unitPrice" data-ridx="' + i + '" value="' + esc(x.unitPrice) + '"></td>' +
+      '<td class="num" style="width:62px"><input class="cell num" type="number" min="1" step="1" data-rfield="qty" data-ridx="' + i + '" value="' + esc(x.qty) + '"></td>' +
+      '<td class="num" style="width:72px">' + (isCount
+        ? '<input class="cell num" type="number" min="0" step="1" data-rfield="pieceGram" data-ridx="' + i + '" value="' + esc(x.pieceGram || 0) + '" title="개 1개의 무게(g). 계란 50, 레몬 100">'
+        : '<span class="nodata">–</span>') + '</td>' +
+      '<td class="num" style="width:112px" data-metric="' + i + '">' + (m.value == null ? '–' : '<strong>' + fmt(m.value, 0) + '</strong> <span class="unit">' + m.label + '</span>') + '</td>' +
+      '<td style="width:44px"><span class="conf c' + x.confidence + '">' + ['', '낮음', '보통', '높음'][x.confidence] + '</span></td>' +
+      '<td style="width:28px"><button class="i-del" data-rdel="' + i + '">×</button></td></tr>';
+  }).join('');
+
+  var report = '';
+  if (st.report && st.report.length) {
+    var changes = st.report.filter(function (x) { return x.level !== 'new'; });
+    report = '<div class="card report">' +
+      '<h2>저장 완료 · 단가 변화 <span class="tag">' + st.report.length + '품목</span></h2>' +
+      '<div class="tableWrap"><table><thead><tr><th>품목</th><th class="num">직전 단가</th><th class="num">이번 단가</th><th class="num">변동</th><th class="num">변동률</th><th>판정</th></tr></thead><tbody>' +
+      st.report.map(function (x) {
+        var cls = x.level === 'up' ? 'up' : x.level === 'down' ? 'down' : '';
+        var mark = x.level === 'up' ? '▲ 상승' : x.level === 'down' ? '▼ 하락' : x.level === 'same' ? '– 동일' : '＋ 신규';
+        return '<tr><td><strong>' + esc(x.name) + '</strong> <span class="unit">' + esc(x.metric) + '</span></td>' +
+          '<td class="num">' + (x.prevPrice == null ? '–' : fmt(x.prevPrice, 0)) + '</td>' +
+          '<td class="num"><strong>' + fmt(x.newPrice, 0) + '</strong></td>' +
+          '<td class="num ' + cls + '">' + (x.delta == null ? '–' : signed(x.delta, 0)) + '</td>' +
+          '<td class="num ' + cls + '">' + (x.pct == null ? '–' : signed(x.pct, 1) + '%') + '</td>' +
+          '<td class="' + cls + '">' + mark + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      (changes.length ? '<div class="hint">단가가 바뀐 품목이 <strong>' + changes.length + '개</strong>입니다. 단가표 탭의 월별 변화표에 바로 반영됩니다.</div>'
+        : '<div class="hint">단가 변동 없이 신규 품목만 추가되었습니다.</div>') +
+      '</div>';
+  }
+
+  return '<div class="card">' +
+    '<h2>발주서 · 영수증 사진으로 단가 입력 <span class="tag">검수 필수</span></h2>' +
+    '<div class="ocr-grid">' +
+      '<div class="ocr-left">' +
+        '<div class="drop">' +
+          '<input type="file" id="receiptImageInput" accept="image/*" capture="environment" class="file-input">' +
+          '<label for="receiptImageInput" class="drop-label"><span class="dic">📷</span><strong>발주서 · 영수증 사진 선택</strong><span class="dh">또는 아래 칸에 직접 붙여넣기</span></label>' +
+        '</div>' +
+        '<div id="ocrProgress" class="ocr-progress">' + (st.stage === 'reading' ? '글자 읽는 중… (사진이 클수록 오래 걸립니다)' : '') + '</div>' +
+        '<div class="field" style="margin-top:8px"><span>인식된 텍스트 (직접 고칠 수 있습니다)</span>' +
+          '<textarea id="receiptText" class="steps" style="min-height:120px" placeholder="예)&#10;강력분 25kg 35,000&#10;버터(무염) 1kg 12,000&#10;계란 30개 6,000">' + esc(st.text || '') + '</textarea></div>' +
+        '<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">' +
+          '<button class="btn sm primary" data-act="rcParse">표로 변환</button>' +
+          '<button class="btn sm" data-act="rcSample">예시 채우기</button>' +
+          '<button class="btn sm" data-act="rcClear">비우기</button>' +
+        '</div>' +
+        '<div class="ocr-hint">사진 인식은 브라우저 안에서 처리되어 <strong>사진이 외부로 나가지 않습니다</strong>. 다만 한글·숫자 오인식이 흔하니 표에서 반드시 확인하세요.</div>' +
+      '</div>' +
+      '<div class="ocr-right">' +
+        (st.rows.length
+          ? '<div class="tableWrap"><table><thead><tr><th>품목</th><th class="num">규격</th><th>단위</th><th class="num">단가(원)</th><th class="num">수량</th><th class="num">개당g</th><th class="num">1단위 단가</th><th>신뢰</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+            '<label class="confirm" style="margin-top:10px"><input type="checkbox" id="rcConfirm"' + (st.confirmed ? ' checked' : '') + '> 위 품목·단가·규격이 발주서와 일치함을 확인했습니다.</label>' +
+            '<button class="btn primary" data-act="rcSave"' + (st.confirmed ? '' : ' disabled') + '>단가표에 저장 (' + st.rows.length + '품목)</button>' +
+            '<div class="hint" style="margin-top:6px">저장하면 <strong>단가표</strong>와 <strong>월별 변화표</strong>에 오늘 날짜로 기록되고, 직전 단가와 비교해 변화가 표시됩니다.</div>'
+          : '<div class="empty">사진을 올리거나 텍스트를 붙여넣고 <strong>표로 변환</strong>을 누르세요.<br><br>인식 형식 예시<br><span class="mono">강력분 25kg 35,000</span><br><span class="mono">버터(무염) 1kg 13,500</span><br><span class="mono">계란 30개 6,300</span><br><span class="mono">이스트 500g 6,200</span></div>') +
+      '</div>' +
+    '</div></div>' +
+    '<div class="card"><h2>입력 규칙</h2><div class="rules">' +
+      '<div class="rule"><b>품목</b> 레시피 재료명과 같아야 원가에 자동 연결</div>' +
+      '<div class="rule"><b>규격</b> 한 포장에 든 양 (25kg → 25 / 500g → 500 / 30개 → 30)</div>' +
+      '<div class="rule"><b>단위</b> kg · g · L · ml · 개 · 봉 · 박스</div>' +
+      '<div class="rule"><b>단가</b> 그 포장의 실제 결제 금액</div>' +
+      '<div class="rule"><b>수량</b> 몇 포장 샀는지 (기본 1)</div>' +
+      '<div class="rule"><b>개당g</b> 개·봉 단위일 때 1개의 무게 (계란 50g) — 넣으면 원가가 g 기준으로 계산됩니다</div>' +
+    '</div></div>' + report;
+}
+
+var SAMPLE_RECEIPT = [
+  '대성식자재 발주서',
+  '2026-11-22',
+  '강력분 25kg 35,000',
+  '통밀가루 1kg 2,300',
+  '버터(무염) 1kg 13,500',
+  '인스턴트 이스트 500g 6,200',
+  '소금 1kg 700',
+  '설탕 1kg 1,350',
+  '계란 30개 6,300',
+  '합계 65,350'
+].join('\n');
+
+/* tesseract.js 를 필요할 때만 CDN에서 불러온다 */
+function loadTesseract() {
+  return new Promise(function (resolve, reject) {
+    if (window.Tesseract) { resolve(window.Tesseract); return; }
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    s.onload = function () { window.Tesseract ? resolve(window.Tesseract) : reject(new Error('로드 실패')); };
+    s.onerror = function () { reject(new Error('CDN 연결 실패')); };
+    document.head.appendChild(s);
+  });
+}
+
+function runReceiptOCR(file) {
+  if (!file) return;
+  state.receipt.stage = 'reading';
+  var prog = document.getElementById('ocrProgress');
+  if (prog) prog.textContent = '글자 읽는 중… 사진 크기에 따라 10~40초 걸립니다.';
+  loadTesseract().then(function (T) {
+    return T.recognize(file, 'kor+eng', {
+      logger: function (m) {
+        if (m && m.status === 'recognizing text' && prog) {
+          prog.textContent = '글자 읽는 중… ' + Math.round((m.progress || 0) * 100) + '%';
+        }
+      }
+    });
+  }).then(function (res) {
+    var text = (res && res.data && res.data.text) || '';
+    state.receipt.text = text;
+    state.receipt.stage = 'idle';
+    state.receipt.rows = [];
+    state.receipt.confirmed = false;
+    renderView();
+    if (!text.trim()) alert('글자를 거의 읽지 못했습니다.\n사진을 밝게 다시 찍거나, 아래 칸에 직접 입력해 주세요.');
+  }).catch(function () {
+    state.receipt.stage = 'idle';
+    renderView();
+    alert('사진 인식 도구를 불러오지 못했습니다(인터넷 연결 필요).\n아래 칸에 발주서 내용을 직접 입력하면 동일하게 계산됩니다.');
+  });
+}
+
+function receiptInput(e) {
+  var t = e.target;
+  if (t.id === 'receiptText') { state.receipt.text = t.value; return; }
+  var f = t.getAttribute('data-rfield');
+  if (!f) return;
+  var i = +t.getAttribute('data-ridx');
+  var row = state.receipt.rows[i];
+  if (!row) return;
+  if (f === 'packSize') row.packSize = C.nonNeg(t.value) || 1;
+  else if (f === 'unitPrice') row.unitPrice = C.nonNeg(t.value);
+  else if (f === 'qty') row.qty = C.nonNeg(t.value) || 1;
+  else if (f === 'pieceGram') row.pieceGram = C.nonNeg(t.value);
+  else row[f] = t.value;
+  if (f === 'unit' || f === 'packSize' || f === 'unitPrice' || f === 'pieceGram') {
+    var cell = t.closest('tr').querySelector('[data-metric="' + i + '"]');
+    var m = C.metricOf({ name: row.name, unit: row.unit, packSize: row.packSize, unitPrice: row.unitPrice, pieceGram: row.pieceGram });
+    if (cell) cell.innerHTML = m.value == null ? '–' : '<strong>' + fmt(m.value, 0) + '</strong> <span class="unit">' + m.label + '</span>';
+  }
+}
+
+function receiptClick(e) {
+  var act = e.target.getAttribute && e.target.getAttribute('data-act');
+
+  if (act === 'rcSample') {
+    state.receipt.text = SAMPLE_RECEIPT;
+    var ta = document.getElementById('receiptText'); if (ta) ta.value = SAMPLE_RECEIPT;
+    return;
+  }
+  if (act === 'rcClear') {
+    state.receipt = { text: '', rows: [], skipped: [], stage: 'idle', confirmed: false, report: null };
+    renderView(); return;
+  }
+  if (act === 'rcParse') {
+    var parsed = C.parseReceiptText(state.receipt.text || '');
+    state.receipt.rows = parsed.rows.map(function (r, i) { r.id = 'r' + (i + 1); return r; });
+    state.receipt.skipped = parsed.skipped;
+    state.receipt.confirmed = false;
+    state.receipt.report = null;
+    renderView();
+    if (!parsed.rows.length) alert('품목을 찾지 못했습니다.\n"품목 규격단위 단가" 순서로 한 줄씩 적어 주세요.\n예) 강력분 25kg 35,000');
+    return;
+  }
+  if (act === 'rcSave') {
+    if (!state.receipt.confirmed) { alert('먼저 "확인했습니다" 체크를 해 주세요.'); return; }
+    var date = todayStr();
+    var rows = state.receipt.rows.slice();
+    var changes = C.priceChanges(state.priceHistory, rows, date);
+    rows.forEach(function (r) {
+      var item = {
+        name: r.name, unit: r.unit, packSize: r.packSize, unitPrice: r.unitPrice,
+        qty: r.qty, pieceGram: r.pieceGram || 0, supplier: r.supplier || '발주서', date: date
+      };
+      var idx = -1;
+      for (var k = 0; k < state.priceItems.length; k++) {
+        if (C.normName(state.priceItems[k].name) === C.normName(r.name) && state.priceItems[k].unit === r.unit) { idx = k; break; }
+      }
+      if (idx > -1) state.priceItems[idx] = Object.assign({}, state.priceItems[idx], item, { id: state.priceItems[idx].id });
+      else state.priceItems.push(Object.assign({ id: uid('pi') }, item));
+      state.priceHistory.push(Object.assign({ id: uid('h') }, item));
+    });
+    state.receipt.report = changes;
+    state.receipt.rows = [];
+    state.receipt.confirmed = false;
+    state.receipt.text = '';
+    renderView();
+    save();
+    var rep = document.querySelector('.report');
+    if (rep && rep.scrollIntoView) rep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  var rdel = e.target.getAttribute && e.target.getAttribute('data-rdel');
+  if (rdel != null) {
+    state.receipt.rows.splice(+rdel, 1);
+    renderView();
+  }
+}
+
+/* ==== 50-io.js ==== */
+/* 내보내기 · A4 인쇄 · 백업 · Google Drive */
+function viewIO() {
+  var r = activeRecipe();
+  var printOpts = state.recipes.map(function (x) {
+    return '<option value="' + esc(x.id) + '"' + (x.id === (state.printId || state.activeId) ? ' selected' : '') + '>' + esc(x.title) + '</option>';
+  }).join('');
+
+  return '<div class="card">' +
+    '<h2>A4 한 장 인쇄 <span class="tag">규격 고정</span></h2>' +
+    '<div class="grid3">' +
+      '<div class="field"><span>레시피</span><select id="printRecipe">' + printOpts + '</select></div>' +
+      '<div class="field"><span>배율</span><input id="printFactor" type="number" min="0.1" step="0.1" value="' + esc(state.cost.factor) + '"></div>' +
+      '<div class="field"><span>출력</span><button class="btn primary" data-act="doPrint">🖨 인쇄 / PDF 저장</button>' +
+        '<small>여백 12mm · 1장 초과 시 자동 축소</small></div>' +
+    '</div>' +
+    '<div class="hint" style="margin-top:8px">안드로이드는 인쇄 창에서 <strong>"PDF로 저장"</strong>을 고르면 파일로 남길 수 있습니다. 수기 메모칸은 항상 빈 줄로 나옵니다.</div>' +
+  '</div>' +
+
+  '<div class="card">' +
+    '<h2>파일로 내보내기 · 불러오기</h2>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap">' +
+      '<button class="btn sm" data-act="expJson">JSON 백업</button>' +
+      '<button class="btn sm" data-act="expCsv">원가표 CSV</button>' +
+      '<button class="btn sm" data-act="expXlsx">엑셀 (xlsx)</button>' +
+      '<button class="btn sm" data-act="impJson">백업 불러오기</button>' +
+    '</div>' +
+    '<input type="file" id="importInput" accept=".json,application/json" class="file-input">' +
+    '<div class="hint" style="margin-top:8px">JSON 백업에는 레시피·단가표·이력이 전부 들어 있습니다. 이 파일 하나면 기기를 옮겨도 복원됩니다.</div>' +
+  '</div>' +
+
+  '<div class="card">' +
+    '<h2>Google Drive 연결 <span class="tag">선택</span></h2>' +
+    '<div class="field"><span>OAuth 클라이언트 ID (본인 것)</span><input id="gcid" value="' + esc(state.gcid || '') + '" placeholder="xxxxx.apps.googleusercontent.com"></div>' +
+    '<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">' +
+      '<button class="btn sm primary" data-act="gLogin">Drive 연결</button>' +
+      '<button class="btn sm" data-act="gBackup">Drive에 저장</button>' +
+      '<button class="btn sm" data-act="gList">Drive 목록</button>' +
+    '</div>' +
+    '<div id="gStatus" class="hint" style="margin-top:8px">' + (state.gtoken ? '연결됨 (토큰 유효 시간 내)' : '연결되지 않음') + '</div>' +
+    '<div class="rules" style="margin-top:10px">' +
+      '<div class="rule">클라우드 저장은 <b>기본 비공개</b>. Drive 링크 공유는 Drive 화면에서 직접 켜고 끕니다.</div>' +
+      '<div class="rule">공유 링크를 아는 사람은 볼 수 있으니, 공개 전 <b>한 번 더 확인</b>하세요.</div>' +
+      '<div class="rule">OAuth 클라이언트 ID는 <b>Google Cloud Console</b> → 사용자 인증 정보에서 5분이면 만듭니다.</div>' +
+      '<div class="rule">승인된 JavaScript 원본에 <b>본인 GitHub Pages 주소</b>를 추가해야 동작합니다.</div>' +
+    '</div>' +
+  '</div>' +
+
+  '<div class="card">' +
+    '<h2>데이터 · 광고</h2>' +
+    '<div class="rules">' +
+      '<div class="rule">저장 위치: <b>이 브라우저(기기)</b> — 서버 전송 없음, 계정 필요 없음</div>' +
+      '<div class="rule">광고: 하단 고정 배너 자리만 준비됨. AdSense 승인 후 코드를 넣으면 켜집니다.</div>' +
+      '<div class="rule">광고 없는 유료 결제는 없습니다 (요청대로 무료 유지).</div>' +
+    '</div>' +
+    '<div class="row" style="gap:6px;margin-top:10px">' +
+      '<button class="btn danger sm" data-act="wipe">모든 데이터 초기화</button>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ── 파일 내보내기 ───────────────────────── */
+function download(name, text, mime) {
+  var blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+function exportJSON() {
+  download('bakery-backup-' + todayStr() + '.json', JSON.stringify({
+    v: 2, exportedAt: nowISO(), recipes: state.recipes, priceItems: state.priceItems, priceHistory: state.priceHistory
+  }, null, 2), 'application/json');
+}
+
+function costRowsForExport() {
+  var index = C.buildPriceIndex(state.priceItems);
+  var out = [];
+  state.recipes.forEach(function (r) {
+    var c = C.computeCost(r, { factor: 1, marginPct: (r.cost && r.cost.targetMarginPct) || 40 }, index);
+    out.push({
+      레시피: r.title, 재료비: Math.round(c.material), 인건비: Math.round(c.labor),
+      오버헤드: Math.round(c.overhead), 포장비: Math.round(c.packaging),
+      총원가: Math.round(c.total), 개수: c.pieces, 개당원가: Math.round(c.totalPerPiece),
+      판매가: c.sellPerPiece, 마진: c.marginPct
+    });
+  });
+  return out;
+}
+
+function exportCSV() {
+  var rows = costRowsForExport();
+  if (!rows.length) { alert('내보낼 레시피가 없습니다.'); return; }
+  var head = Object.keys(rows[0]);
+  var lines = [head.join(',')].concat(rows.map(function (r) {
+    return head.map(function (k) { return '"' + String(r[k]).replace(/"/g, '""') + '"'; }).join(',');
+  }));
+  download('bakery-cost-' + todayStr() + '.csv', '\ufeff' + lines.join('\n'), 'text/csv;charset=utf-8');
+}
+
+function exportXLSX() {
+  loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js').then(function () {
+    var wb = XLSX.utils.book_new();
+    var rows = costRowsForExport();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), '원가계산');
+
+    var ing = [];
+    state.recipes.forEach(function (r) {
+      (r.ingredients || []).forEach(function (g) {
+        ing.push({ 레시피: r.title, 재료: g.name, 그룹: GROUP_LABEL[g.group] || g.group, 무게g: g.grams });
+      });
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ing), '재료');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.priceItems.map(function (p) {
+      var m = C.metricOf(p);
+      return { 품목: p.name, 단위: p.unit, 규격: p.packSize, 구매가: p.unitPrice, '1단위단가': Math.round(m.value || 0), 단가기준: m.label, 기준일: p.date, 거래처: p.supplier };
+    })), '단가표');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.priceHistory.map(function (p) {
+      return { 날짜: p.date, 품목: p.name, 단위: p.unit, 규격: p.packSize, 구매가: p.unitPrice, 거래처: p.supplier };
+    })), '단가이력');
+    XLSX.writeFile(wb, 'bakery-' + todayStr() + '.xlsx');
+  }).catch(function () {
+    alert('엑셀 도구를 불러오지 못했습니다(인터넷 필요). CSV로 내보내면 엑셀에서 바로 열립니다.');
+  });
+}
+
+function loadScript(src) {
+  return new Promise(function (res, rej) {
+    var s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = function () { rej(new Error('load fail')); };
+    document.head.appendChild(s);
+  });
+}
+
+function importJSON(file) {
+  if (!file) return;
+  var fr = new FileReader();
+  fr.onload = function () {
+    try {
+      var d = JSON.parse(String(fr.result));
+      if (!d.recipes || !d.recipes.length) throw new Error('레시피 없음');
+      var mode = confirm('기존 데이터를 덮어쓸까요?\n\n확인 = 덮어쓰기\n취소 = 현재 데이터에 추가');
+      if (mode) {
+        state.recipes = d.recipes;
+        state.priceItems = d.priceItems || [];
+        state.priceHistory = d.priceHistory || [];
+      } else {
+        state.recipes = state.recipes.concat(d.recipes.map(function (r) { r.id = uid('r'); return r; }));
+        state.priceItems = state.priceItems.concat(d.priceItems || []);
+        state.priceHistory = state.priceHistory.concat(d.priceHistory || []);
+      }
+      state.activeId = state.recipes[0].id;
+      renderView(); save();
+      alert('불러오기 완료 (' + d.recipes.length + '개 레시피)');
+    } catch (e) { alert('파일을 읽을 수 없습니다.\nJSON 백업 파일인지 확인해 주세요.'); }
+  };
+  fr.readAsText(file);
+}
+
+/* ── A4 인쇄 시트 ───────────────────────── */
+function renderPrintRoot() {
+  var host = document.getElementById('printRoot');
+  if (!host) return;
+  var r = recipeById(state.printId || state.activeId) || activeRecipe();
+  if (!r) { host.innerHTML = ''; return; }
+  var index = C.buildPriceIndex(state.priceItems);
+  var res = C.buildResult(r, { mode: 'multiplier', multiplier: state.cost.factor });
+  var c = C.computeCost(r, {
+    factor: state.cost.factor, marginPct: (r.cost && r.cost.targetMarginPct) || 40,
+    pieceCount: (r.cost && r.cost.pieceCount) || 1, laborMinutes: r.cost && r.cost.laborMinutes,
+    hourlyWage: r.cost && r.cost.hourlyWage, overheadPerBatch: r.cost && r.cost.overheadPerBatch,
+    packagingPerPiece: r.cost && r.cost.packagingPerPiece
+  }, index);
+
+  var ing = res.rows.map(function (x, i) {
+    return '<tr><td>' + (i + 1) + '</td><td>' + esc(x.name) + '</td><td class="r">' + fmt(x.scaledGrams, 1) + '</td><td class="r">' + (x.bakersPct == null ? '–' : fmt(x.bakersPct, 0) + '%') + '</td></tr>';
+  }).join('');
+
+  host.innerHTML =
+    '<div class="sheet">' +
+      '<div class="sheet-head"><div><h1>' + esc(r.title) + '</h1>' +
+        '<div class="sh-meta">' + (r.category === 'bread' ? '빵' : r.category === 'cookie' ? '쿠키' : r.category === 'cake' ? '케이크' : '기타') +
+        ' · 배율 ' + fmt(res.factor, 2) + '× · 손실률 ' + fmt(res.loss * 100, 1) + '% · ' + todayStr() + '</div></div>' +
+        '<div class="sh-sum"><div><span>반죽</span><b>' + fmt(res.scaledDoughG, 0) + 'g</b></div>' +
+        '<div><span>완성</span><b>' + fmt(res.expectedFinishedG, 0) + 'g</b></div></div></div>' +
+      '<div class="sh-body">' +
+        '<div class="sh-left"><table class="sh-t"><thead><tr><th>#</th><th>재료</th><th class="r">무게(g)</th><th class="r">B%</th></tr></thead><tbody>' + ing + '</tbody></table></div>' +
+        '<div class="sh-right"><table class="sh-t"><tbody>' +
+          '<tr><td>재료비</td><td class="r">' + won(c.material) + '</td></tr>' +
+          '<tr><td>인건비</td><td class="r">' + won(c.labor) + '</td></tr>' +
+          '<tr><td>오버헤드</td><td class="r">' + won(c.overhead) + '</td></tr>' +
+          '<tr><td>포장비</td><td class="r">' + won(c.packaging) + '</td></tr>' +
+          '<tr class="tot"><td>총원가</td><td class="r">' + won(c.total) + '</td></tr>' +
+          '<tr class="tot"><td>개당 원가</td><td class="r">' + won(c.totalPerPiece) + ' / ' + c.pieces + '개</td></tr>' +
+          '<tr class="sell"><td>판매가</td><td class="r">' + won(c.sellPerPiece) + '</td></tr>' +
+          '<tr><td>개당 이익</td><td class="r">' + won(c.profitPerPiece) + '</td></tr>' +
+        '</tbody></table></div>' +
+      '</div>' +
+      '<div class="sh-steps"><b>공정</b><div class="sh-stepbody">' + esc(r.steps || '').replace(/\n/g, '<br>') + '</div></div>' +
+      '<div class="sh-memo"><b>메모 (직접 쓰기)</b><div class="memo-lines">' +
+        new Array(7).join('<div class="ml"></div>') + '</div></div>' +
+      '<div class="sh-foot">베이커리 원가계산 · 밀가루 = 100% 기준 · 단가는 최신 단가표 적용</div>' +
+    '</div>';
+}
+
+/* ── Google Drive (본인 OAuth 클라이언트 ID 필요) ── */
+function loadGIS() {
+  return new Promise(function (res, rej) {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) { res(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.onload = res; s.onerror = function () { rej(new Error('gis fail')); };
+    document.head.appendChild(s);
+  });
+}
+
+function driveConnect(cb) {
+  var cid = state.gcid;
+  if (!cid) { alert('OAuth 클라이언트 ID를 먼저 입력해 주세요.\n(Google Cloud Console → 사용자 인증 정보)'); return; }
+  loadGIS().then(function () {
+    var client = google.accounts.oauth2.initTokenClient({
+      client_id: cid,
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      callback: function (resp) {
+        if (resp && resp.access_token) { state.gtoken = resp.access_token; cb && cb(); }
+        else alert('Drive 연결이 취소되었습니다.');
+      }
+    });
+    client.requestAccessToken();
+  }).catch(function () { alert('Google 로그인 도구를 불러오지 못했습니다.'); });
+}
+
+function driveUpload() {
+  if (!state.gtoken) { driveConnect(driveUpload); return; }
+  var meta = { name: 'bakery-backup-' + todayStr() + '.json', mimeType: 'application/json' };
+  var body = JSON.stringify({ v: 2, exportedAt: nowISO(), recipes: state.recipes, priceItems: state.priceItems, priceHistory: state.priceHistory });
+  var boundary = 'bakery' + Date.now();
+  var multipart = '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
+    '\r\n--' + boundary + '\r\nContent-Type: application/json\r\n\r\n' + body + '\r\n--' + boundary + '--';
+  fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + state.gtoken, 'Content-Type': 'multipart/related; boundary=' + boundary },
+    body: multipart
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    var el = document.getElementById('gStatus');
+    if (d && d.id) { if (el) el.innerHTML = '저장 완료 · 파일 ID <code>' + esc(d.id) + '</code><br><a href="https://drive.google.com/file/d/' + esc(d.id) + '/view" target="_blank" rel="noopener">Drive에서 열기</a>'; }
+    else if (el) el.textContent = '저장 실패: ' + JSON.stringify(d).slice(0, 160);
+  }).catch(function () {
+    var el = document.getElementById('gStatus'); if (el) el.textContent = '저장 실패 (네트워크 또는 권한).';
+  });
+}
+
+function driveList() {
+  if (!state.gtoken) { driveConnect(driveList); return; }
+  fetch('https://www.googleapis.com/drive/v3/files?q=name%20contains%20%27bakery-backup%27&fields=files(id,name,modifiedTime)&orderBy=modifiedTime%20desc&pageSize=10', {
+    headers: { Authorization: 'Bearer ' + state.gtoken }
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    var el = document.getElementById('gStatus');
+    if (!el) return;
+    if (!d.files || !d.files.length) { el.textContent = 'Drive에 저장된 백업이 없습니다.'; return; }
+    el.innerHTML = d.files.map(function (f) {
+      return '<div><a href="https://drive.google.com/file/d/' + esc(f.id) + '/view" target="_blank" rel="noopener">' + esc(f.name) + '</a> <span class="hint">' + esc(f.modifiedTime || '') + '</span></div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+function ioClick(e) {
+  var act = e.target.getAttribute && e.target.getAttribute('data-act');
+  if (act === 'expJson') { exportJSON(); return; }
+  if (act === 'expCsv') { exportCSV(); return; }
+  if (act === 'expXlsx') { exportXLSX(); return; }
+  if (act === 'impJson') { var fi = document.getElementById('importInput'); if (fi) fi.click(); return; }
+  if (act === 'doPrint') {
+    state.printId = (document.getElementById('printRecipe') || {}).value || state.activeId;
+    renderPrintRoot();
+    setTimeout(function () { window.print(); }, 120);
+    return;
+  }
+  if (act === 'gLogin') { driveConnect(function () { var el = document.getElementById('gStatus'); if (el) el.textContent = '연결됨'; }); return; }
+  if (act === 'gBackup') { driveUpload(); return; }
+  if (act === 'gList') { driveList(); return; }
+  if (act === 'wipe') {
+    if (!confirm('모든 레시피·단가표·이력을 지웁니다. 되돌릴 수 없습니다.\n계속할까요?')) return;
+    try { localStorage.removeItem(KEY); } catch (err) {}
+    location.reload();
+  }
+}
+
+function ioInput(e) {
+  var t = e.target;
+  if (t.id === 'costFactor' || t.id === 'printFactor') { state.cost.factor = Math.max(0.1, C.num(t.value) || 1); return; }
+  if (t.id === 'gcid') { state.gcid = t.value.trim(); saveSoon(); return; }
+  if (t.id === 'printRecipe') { state.printId = t.value; state.cost.factor = C.num((document.getElementById('printFactor') || {}).value) || state.cost.factor; renderPrintRoot(); return; }
+}
+
+/* ==== 60-main.js ==== */
+/* 라우터 · 이벤트 위임 · 시작 */
+function onNavClick(e) {
+  var b = e.target.closest('[data-tab]');
+  if (!b) return;
+  state.tab = b.getAttribute('data-tab');
+  try { history.replaceState(null, '', '#' + state.tab); } catch (err) {}
+  renderView();
+  save();
+}
+
+function routeInput(e) {
+  if (state.tab === 'recipe') return recipeInput(e);
+  if (state.tab === 'cost') return patchCost();
+  if (state.tab === 'price') return priceInput(e);
+  if (state.tab === 'receipt') return receiptInput(e);
+  if (state.tab === 'io') return ioInput(e);
+}
+
+function routeClick(e) {
+  if (e.target.getAttribute && e.target.getAttribute('data-tab')) return onNavClick(e);
+  if (e.target.id === 'costRecipe') return;
+  if (state.tab === 'recipe') return recipeClick(e);
+  if (state.tab === 'cost') return costClick(e);
+  if (state.tab === 'price') return priceClick(e);
+  if (state.tab === 'receipt') return receiptClick(e);
+  if (state.tab === 'io') return ioClick(e);
+}
+
+function bindAll() {
+  var nav = document.getElementById('nav');
+  if (nav) nav.addEventListener('click', onNavClick);
+
+  var view = document.getElementById('view');
+  view.addEventListener('click', routeClick);
+  view.addEventListener('input', function (e) {
+    if (e.target.id === 'costRecipe') {
+      state.cost.recipeId = e.target.value;
+      renderView(); save(); return;
+    }
+    routeInput(e);
+  });
+  view.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.id === 'costRecipe') { state.cost.recipeId = t.value; renderView(); save(); return; }
+    if (t.name === 'pmode') { state.view.piecesMode = t.value; renderView(); save(); return; }
+    if (t.id === 'recipeImageInput') { if (t.files && t.files[0]) runRecipeOCR(t.files[0]); return; }
+    if (t.id === 'receiptImageInput') { if (t.files && t.files[0]) runReceiptOCR(t.files[0]); return; }
+    if (t.id === 'importInput') { importJSON(t.files && t.files[0]); return; }
+    if (t.id === 'recipeOcrConfirm') { state.recipeOcr.confirmed = t.checked; var h = document.getElementById('recipeOcrHost'); if (h) h.innerHTML = recipeOcrHost(); return; }
+    if (t.id === 'rcConfirm') {
+      state.receipt.confirmed = t.checked;
+      var btn = document.querySelector('[data-act="rcSave"]');
+      if (btn) btn.disabled = !t.checked;
+      return;
+    }
+    if (t.getAttribute && t.getAttribute('data-f') === 'category') {
+      var r = activeRecipe(); if (r) { r.category = t.value; saveSoon(); }
+      return;
+    }
+  });
+}
+
+/* 레시피 사진 OCR */
+function runRecipeOCR(file) {
+  if (!file) return;
+  state.recipeOcr.stage = 'open';
+  var host = document.getElementById('recipeOcrHost');
+  if (host) host.innerHTML = '<div class="card"><div class="ocr-progress">사진 읽는 중… 잠시만 기다려 주세요.</div></div>';
+  loadTesseract().then(function (T) {
+    return T.recognize(file, 'kor+eng');
+  }).then(function (res) {
+    state.recipeOcr.text = (res && res.data && res.data.text) || '';
+    var parsed = C.parseRecipeText(state.recipeOcr.text);
+    state.recipeOcr.rows = parsed.rows;
+    state.recipeOcr.confirmed = false;
+    if (host) host.innerHTML = recipeOcrHost();
+    if (!parsed.rows.length) alert('재료를 찾지 못했습니다.\n"강력분 1000g" 처럼 한 줄씩 적어 주세요.');
+  }).catch(function () {
+    state.recipeOcr.stage = 'open';
+    if (host) host.innerHTML = recipeOcrHost();
+    alert('사진 인식 도구를 불러오지 못했습니다. 텍스트를 직접 붙여넣어 주세요.');
+  });
+}
+
+function init() {
+  load();
+  var q = '';
+  try { q = new URLSearchParams(location.search || '').get('tab') || ''; } catch (e) {}
+  var h = q || String(location.hash || '').replace('#', '');
+  if (TABS.some(function (t) { return t.v === h; })) state.tab = h;
+  bindAll();
+  renderView();
+  setStatus('기기에 자동 저장 · 준비됨', false);
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function () {});
+    });
+  }
+}
+
+var booted = false;
+function boot() { if (booted) return; booted = true; init(); }
+if (document.getElementById('nav')) boot();
+else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
